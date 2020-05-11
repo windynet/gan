@@ -5,11 +5,11 @@ import gan.media.MediaSession;
 import java.io.IOException;
 import java.util.UUID;
 
-public class RtspConnectionMediaSession implements MediaSession<RtspConnection> {
+public class RtspConnectionMediaSession implements MediaSession<RtspClient> {
 
-    RtspConnection mRtspConnection;
+    RtspClient mRtspConnection;
 
-    public RtspConnectionMediaSession(RtspConnection rtspConnection){
+    public RtspConnectionMediaSession(RtspClient rtspConnection){
         mRtspConnection = rtspConnection;
     }
 
@@ -23,7 +23,7 @@ public class RtspConnectionMediaSession implements MediaSession<RtspConnection> 
     }
 
     @Override
-    public RtspConnection getSession() {
+    public RtspClient getSession() {
         return mRtspConnection;
     }
 

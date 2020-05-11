@@ -9,13 +9,13 @@ import java.io.IOException;
 
 public class RtspPullServer extends BaseServer implements Runnable{
 
-    RtspConnection mRtspConnection;
+    RtspClient mRtspConnection;
     boolean mPlaying;
     String mRtsp;
 
     public void play(String rtsp){
         mRtsp = rtsp;
-        mRtspConnection = new RtspConnection(rtsp);
+        mRtspConnection = new RtspClient(rtsp);
         SystemServer.executeThread(new Runnable() {
             @Override
             public void run() {
@@ -23,7 +23,7 @@ public class RtspPullServer extends BaseServer implements Runnable{
                 try{
                     mRtspConnection.connect();
                     mRtspConnection.sendRequestOption();
-                    RtspConnection.Response response =mRtspConnection.sendRequestDESCRIBE();
+                    RtspClient.Response response =mRtspConnection.sendRequestDESCRIBE();
                     if(response.status==200){
                         if(mRtspConnection.sendRequestSetup2()){
                             if( mRtspConnection.sendRequestPlay()){

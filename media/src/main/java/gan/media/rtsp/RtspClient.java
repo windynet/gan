@@ -20,35 +20,35 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class RtspConnection implements Closeable{
+public class RtspClient implements Closeable{
 
-    final static String charsetName = "UTF-8";
-    final static String end = "\r\n";
+	final static String charsetName = "UTF-8";
+	final static String end = "\r\n";
 
 	Socket mSocket;
 	String mHost="";
 	int mPort;
-	String mUrl;
+	String mUrl, mNewUrl;
 	BufferedReader mBufferedReader;
 	OutputStream mOutputStream;
 	InputStream	mInputStream;
 	private int mCSeq;
-    private String mSessionID;
-    private String mAuthorization;
-    private long mTimestamp;
-    private String mUserName = "", mPassword = "";
-    private String mAgent = "gan_1.0.0";
+	private String mSessionID;
+	private String mAuthorization;
+	private long mTimestamp;
+	private String mUserName = "", mPassword = "";
+	private String mAgent = "gan_1.0.0";
 	private int mRtpPort;
 	private int mTimeOut;//秒
 	private String mSdp;
 	private RtspSdpParser mRtspSdpParser;
 	FileLogger mLogger;
 
-	public RtspConnection(String url){
+	public RtspClient(String url){
 		this(url,"","");
 	}
 
-	public RtspConnection(String url,String userName,String password){
+	public RtspClient(String url, String userName, String password){
 		mUrl = url;
 		mUserName = userName;
 		mPassword = password;
@@ -98,7 +98,8 @@ public class RtspConnection implements Closeable{
 	}
 
 	public FileLogger initLogger(){
-		return mLogger = FileLogger.getInstance("/rtsp/"+URLEncoder.encode(mHost));
+		return mLogger = FileLogger.getInstance("/rtsp/"+URLEncoder.encode(mHost))
+				.setLogcat(SystemServer.IsDebug());
 	}
 
 	public void close() throws IOException {
@@ -130,19 +131,19 @@ public class RtspConnection implements Closeable{
 	}
 
 	private String addHeaders() {
-        StringBuffer sb = new StringBuffer();
-        sb.append("CSeq: " + (++mCSeq) + "\r\n")
-                .append((mSessionID != null ? "Session: " + mSessionID + "\r\n" :""))
-                .append("User-Agent: " + mAgent + "\r\n");
-        return sb.toString();
-    }
+		StringBuffer sb = new StringBuffer();
+		sb.append("CSeq: " + (++mCSeq) + "\r\n")
+				.append((mSessionID != null ? "Session: " + mSessionID + "\r\n" :""))
+				.append("User-Agent: " + mAgent + "\r\n");
+		return sb.toString();
+	}
 
-    private String authorization2(String public_method){
-	    if(TextUtils.isEmpty(mAuthorization)){
-	        return "";
-        }
+	private String authorization2(String public_method){
+		if(TextUtils.isEmpty(mAuthorization)){
+			return "";
+		}
 		String authorization = mAuthorization;
-	    if(authorization.startsWith("Basic")){
+		if(authorization.startsWith("Basic")){
 			try {
 				return "Authorization: Basic "+Base64.encode(new String(mUserName+":"+mPassword).getBytes(charsetName))+end;
 			} catch (UnsupportedEncodingException e) {
@@ -160,9 +161,9 @@ public class RtspConnection implements Closeable{
 					+ ","+authorization.replace("Digest","")
 					+", uri="+'"'+mUrl+'"'+", response="+'"'+responseStr+'"'+end;
 		}
-    }
+	}
 
-    private String authorization(String public_method){
+	private String authorization(String public_method){
 		return authorization2(public_method);
 //		if(TextUtils.isEmpty(mAuthorization)){
 //			return "";
@@ -178,50 +179,50 @@ public class RtspConnection implements Closeable{
 //		return "Authorization: Digest "+"username="+'"'+mUserName+'"'
 //				+ ","+authorization.replace("Digest","")
 //				+", uri="+'"'+mUrl+'"'+", response="+'"'+responseStr+'"'+end;
-    }
+	}
 
-	/** 
-     * Forges and sends the OPTIONS request  
-     */  
-    public boolean sendRequestOption() throws IOException {
-        String request = "OPTIONS " + mUrl + " RTSP/1.0\r\n" + addHeaders()+end;
+	/**
+	 * Forges and sends the OPTIONS request
+	 */
+	public boolean sendRequestOption() throws IOException {
+		String request = "OPTIONS " + mUrl + " RTSP/1.0\r\n" + addHeaders()+end;
 		mLogger.log("request:%s",request);
-        mOutputStream.write(request.getBytes(charsetName));
-        Response response = Response.parseResponse(mBufferedReader);
+		mOutputStream.write(request.getBytes(charsetName));
+		Response response = Response.parseResponse(mBufferedReader);
 		mLogger.log("response:%s",response.status);
-        if (response.status == 200){
-            return true;
-        }else if(response.status == 401){
+		if (response.status == 200){
+			return true;
+		}else if(response.status == 401){
 			mAuthorization = response.headers.get("www-authenticate");
-            request = "OPTIONS " + mUrl + " RTSP/1.0\r\n" + addHeaders()+
-                    authorization("OPTIONS")+end;
+			request = "OPTIONS " + mUrl + " RTSP/1.0\r\n" + addHeaders()+
+					authorization("OPTIONS")+end;
 			mLogger.log("request2:%s",request);
-            mOutputStream.write(request.getBytes(charsetName));
-            response = Response.parseResponse(mBufferedReader);
+			mOutputStream.write(request.getBytes(charsetName));
+			response = Response.parseResponse(mBufferedReader);
 			mLogger.log("response:%s",response.status);
-            return response.status == 200;
-        }
-        return false;
-    }
+			return response.status == 200;
+		}
+		return false;
+	}
 
-    public HashMap<String,String> mapValues(String value){
-        if(value.contains(",")){
-            HashMap<String,String> mapValues = new NetParamsMap();
-            for(String s:value.split(",")){
-                String[] ss= s.split("=");
-                mapValues.put(ss[0].trim(),ss[1].trim());
-            }
-            return mapValues;
-        }
-        return null;
-    }
+	public HashMap<String,String> mapValues(String value){
+		if(value.contains(",")){
+			HashMap<String,String> mapValues = new NetParamsMap();
+			for(String s:value.split(",")){
+				String[] ss= s.split("=");
+				mapValues.put(ss[0].trim(),ss[1].trim());
+			}
+			return mapValues;
+		}
+		return null;
+	}
 
 	public Response sendRequestDESCRIBE() throws IOException {
 		String request = "DESCRIBE "+ mUrl +" RTSP/1.0\r\n"+
 				"Accept: "+"application/sdp"+"\r\n"+
-                addHeaders()+authorization("DESCRIBE")+end;
+				addHeaders()+authorization("DESCRIBE")+end;
 		mLogger.log("request:%s",request);
-        mOutputStream.write(request.getBytes(charsetName));
+		mOutputStream.write(request.getBytes(charsetName));
 		Response response = Response.parseResponse(mBufferedReader);
 		mLogger.log("response:%s",response.status);
 		if(response.status == 200){
@@ -248,17 +249,35 @@ public class RtspConnection implements Closeable{
 		if(!TextUtils.isEmpty(mSdp)){
 			mRtspSdpParser.parserSdp(mSdp);
 		}
+		parseDESCRIBEResponse(response.responseStr);
+	}
+
+	protected void parseDESCRIBEResponse(String response){
+		if(!TextUtils.isEmpty(response)){
+			BufferedReader br = new BufferedReader(new StringReader(response));
+			try {
+				String line;
+				while((line = br.readLine()) != null){
+					if(line.startsWith("Content-Base:") && line.contains("rtsp://")){
+						int startIndex = line.indexOf("rtsp://");
+						int endIndex = line.length() - 1;
+						mNewUrl = line.substring(startIndex, endIndex);
+						break;
+					}
+				}
+			}catch (Exception e){e.printStackTrace();}
+		}
 	}
 
 	public void sendRtspRequest(String rtsp) throws IOException {
-    	String method = rtsp.substring(0,rtsp.indexOf(" "));
-    	if(!TextUtils.isEmpty(method)){
-    		StringBuilder sb = new StringBuilder(rtsp);
-    		sb.append(addHeaders()).append(authorization(method)).append(end);
-    		String request = sb.toString();
+		String method = rtsp.substring(0,rtsp.indexOf(" "));
+		if(!TextUtils.isEmpty(method)){
+			StringBuilder sb = new StringBuilder(rtsp);
+			sb.append(addHeaders()).append(authorization(method)).append(end);
+			String request = sb.toString();
 			mLogger.log("request:%s",request);
-    		send(request);
-    	}
+			send(request);
+		}
 	}
 
 	public void send(String request) throws IOException {
@@ -272,7 +291,7 @@ public class RtspConnection implements Closeable{
 				String request = "OPTIONS " + mUrl + " RTSP/1.0\r\n" + addHeaders()+end;
 				mOutputStream.write(request.getBytes(charsetName));
 				Handler handler = SystemServer.getMainHandler();
-				handler.postDelayed(this,mTimeOut*1000);
+				handler.postDelayed(this,fixPingTime());
 			} catch (IOException e) {
 				//socket closed
 			}
@@ -282,7 +301,16 @@ public class RtspConnection implements Closeable{
 	private void runHeartBeat(){
 		Handler handler = SystemServer.getMainHandler();
 		handler.removeCallbacks(mHeartBeatRunnable);
-		handler.postDelayed(mHeartBeatRunnable, mTimeOut*1000);
+		if(mTimeOut>0){
+			handler.postDelayed(mHeartBeatRunnable, fixPingTime());
+		}
+	}
+
+	public long fixPingTime(){
+		if(mTimeOut>20){
+			return (mTimeOut-20)*1000;
+		}
+		return mTimeOut*1000;
 	}
 
 	private void stopHeartBeat(){
@@ -290,24 +318,24 @@ public class RtspConnection implements Closeable{
 		handler.removeCallbacks(mHeartBeatRunnable);
 	}
 
-    public Response sendRequestAnnounce(String sdp) throws IllegalStateException, IOException {
-        String body = sdp;
-        String request = "ANNOUNCE "+ mUrl +" RTSP/1.0\r\n" +
-                addHeaders()+
-                "Content-Type: application/sdp\r\n" +  
-                "Content-Length: " + body.length() + "\r\n\r\n" +  
-                body;
+	public Response sendRequestAnnounce(String sdp) throws IllegalStateException, IOException {
+		String body = sdp;
+		String request = "ANNOUNCE "+ mUrl +" RTSP/1.0\r\n" +
+				addHeaders()+
+				"Content-Type: application/sdp\r\n" +
+				"Content-Length: " + body.length() + "\r\n\r\n" +
+				body;
 		mLogger.log("request:%s",request);
-        mOutputStream.write(request.getBytes("UTF-8"));
-        Response response = Response.parseResponse(mBufferedReader);
+		mOutputStream.write(request.getBytes("UTF-8"));
+		Response response = Response.parseResponse(mBufferedReader);
 		mLogger.log("response:%s",response.status);
-        if (response.headers.containsKey("server")) {
+		if (response.headers.containsKey("server")) {
 			DebugLog.info("RTSP server name:" + response.headers.get("server"));
-        } else {
+		} else {
 			DebugLog.info("RTSP server name unknown");
-        }  
-        if (response.status == 401) {  
-            String nonce, realm;
+		}
+		if (response.status == 401) {
+			String nonce, realm;
 			if (mUserName == null || mPassword == null) {
 				throw new IllegalStateException("Authentication is enabled and setCredentials(String,String) was not called !");
 			}
@@ -319,72 +347,72 @@ public class RtspConnection implements Closeable{
 			} catch (Exception e) {
 				throw new IOException("Invalid response from server");
 			}
-            request = "ANNOUNCE "+ mUrl +" RTSP/1.0\r\n" +
-                    "Content-Type: application/sdp"+ "\r\n" +  
-                    "Content-Length: " + body.length() + "\r\n" +
+			request = "ANNOUNCE "+ mUrl +" RTSP/1.0\r\n" +
+					"Content-Type: application/sdp"+ "\r\n" +
+					"Content-Length: " + body.length() + "\r\n" +
 					addHeaders()+
 					authorization2("ANNOUNCE")+
-                    body+ "\r\n\r\n";
+					body+ "\r\n\r\n";
 			mLogger.log("request:%s",request);
-            mOutputStream.write(request.getBytes("UTF-8"));
-            response = Response.parseResponse(mBufferedReader);
+			mOutputStream.write(request.getBytes("UTF-8"));
+			response = Response.parseResponse(mBufferedReader);
 			mLogger.log("request:%s",response.status);
-            if (response.status == 401) throw new RuntimeException("Bad credentials !");  
-        } else if (response.status == 403) {  
-            throw new RuntimeException("Access forbidden !");
-        }
-        return response;
-    } 
-    
-    /**
+			if (response.status == 401) throw new RuntimeException("Bad credentials !");
+		} else if (response.status == 403) {
+			throw new RuntimeException("Access forbidden !");
+		}
+		return response;
+	}
+
+	/**
 	 * 推流setup
-     * Forges and sends the SETUP request  
-     */  
-    public boolean sendRequestSetup() throws IllegalStateException, IOException {
-    	int index = 0;
-        for (int i= 0;i<2;i++) {
-            int trackId = i;  
-            String interleaved = index+"-"+(++index);
-            index++;
-            String request = "SETUP "+ mUrl +"/trackID="+trackId+" RTSP/1.0\r\n"
-            		+ "Transport: RTP/AVP/TCP;unicast;mode=record;interleaved="+interleaved+"\r\n"
+	 * Forges and sends the SETUP request
+	 */
+	public boolean sendRequestSetup() throws IllegalStateException, IOException {
+		int index = 0;
+		for (int i= 0;i<2;i++) {
+			int trackId = i;
+			String interleaved = index+"-"+(++index);
+			index++;
+			String request = "SETUP "+ mUrl +"/trackID="+trackId+" RTSP/1.0\r\n"
+					+ "Transport: RTP/AVP/TCP;unicast;mode=record;interleaved="+interleaved+"\r\n"
 					+"x-Dynamic-Rate: 0\r\n"
 					+ addHeaders()
-                    +end;
+					+end;
 			mLogger.log("request:%s",request);
-            mOutputStream.write(request.getBytes(charsetName));
-            Response response = Response.parseResponse(mBufferedReader);//
+			mOutputStream.write(request.getBytes(charsetName));
+			Response response = Response.parseResponse(mBufferedReader);//
 			mLogger.log("response:%s",response.status);
-            if (i == 0){
-            	try {
-            		String session = response.headers.get("session").trim();
-                    String sessionID = parseSession(session);
-                    if(!TextUtils.isEmpty(sessionID)){
-                    	mSessionID = sessionID;
+			if (i == 0){
+				try {
+					String session = response.headers.get("session").trim();
+					String sessionID = parseSession(session);
+					if(!TextUtils.isEmpty(sessionID)){
+						mSessionID = sessionID;
 					}
-                    mTimeOut = parseTimeOut(session);
+					mTimeOut = parseTimeOut(session);
 					mLogger.log("mSessionID: "+ mSessionID+ "response.status:"+response.status);
-                } catch (Exception e) {  
-                    e.printStackTrace();
-                }  
-            }  
-            if (response.status != 200){
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+			if (response.status != 200){
 				mLogger.log("return for resp :" +response.status);
-                return false;
-            }
-        }
-        return true;  
-    }
+				return false;
+			}
+		}
+		return true;
+	}
 
-    private String parseSession(String session){
+	private String parseSession(String session){
 		if(session.contains(";")) {
 			return session.split(";")[0];
 		}
 		return session;
 	}
 
-    private int parseTimeOut(String session){
-    	try{
+	private int parseTimeOut(String session){
+		try{
 			if(session.contains(";")){
 				HashMap<String,String> values = new NetParamsMap();
 				for(String value:session.split(";")){
@@ -396,7 +424,7 @@ public class RtspConnection implements Closeable{
 				return Integer.valueOf(values.get("timeout"));
 			}
 		}catch (Exception e){
-    		e.printStackTrace();
+			e.printStackTrace();
 		}
 		return 60;
 	}
@@ -406,8 +434,12 @@ public class RtspConnection implements Closeable{
 	}
 
 	public String findServerUrl(){
-    	final String serverIp = mRtspSdpParser.getServerIp();
-    	if(TextUtils.isEmpty(serverIp)){
+		if(!TextUtils.isEmpty(mNewUrl)){
+			return mNewUrl;
+		}
+
+		final String serverIp = mRtspSdpParser.getServerIp();
+		if(TextUtils.isEmpty(serverIp)){
 			return mUrl;
 		}
 		if("0.0.0.0".equals(serverIp)
@@ -419,8 +451,8 @@ public class RtspConnection implements Closeable{
 			String host = uri.getHost();
 			return mUrl.replace(host,serverIp);
 		}catch (Exception e){
-    		e.printStackTrace();
-    		return mUrl;
+			e.printStackTrace();
+			return mUrl;
 		}
 	}
 
@@ -474,26 +506,26 @@ public class RtspConnection implements Closeable{
 		}
 		return true;
 	}
-    
-    /** 
-     * Forges and sends the RECORD request  
-     */  
-    public boolean sendRequestPlay() throws IllegalStateException, SocketException, IOException {  
-        String request = "PLAY "+ findServerUrl() +" RTSP/1.0\r\n" +
+
+	/**
+	 * Forges and sends the RECORD request
+	 */
+	public boolean sendRequestPlay() throws IllegalStateException, SocketException, IOException {
+		String request = "PLAY "+ findServerUrl() +" RTSP/1.0\r\n" +
 				"Range: npt=0.000-\r\n" +
-                addHeaders()+
-                authorization("PLAY")+
+				addHeaders()+
+				authorization("PLAY")+
 				end;
 		mLogger.log("request:%s",request);
-        mOutputStream.write(request.getBytes("UTF-8"));
-        Response response = Response.parseResponse(mBufferedReader);
+		mOutputStream.write(request.getBytes("UTF-8"));
+		Response response = Response.parseResponse(mBufferedReader);
 		mLogger.log("response:%s",response.status);
-        if (response.status != 200){
-            return false;  
-        }
+		if (response.status != 200){
+			return false;
+		}
 		runHeartBeat();
-        return true;
-    }
+		return true;
+	}
 
 	/**
 	 * Forges and sends the RECORD request
@@ -514,9 +546,9 @@ public class RtspConnection implements Closeable{
 		runHeartBeat();
 		return true;
 	}
-    
-    /**
-	 * Forges and sends the TEARDOWN request 
+
+	/**
+	 * Forges and sends the TEARDOWN request
 	 */
 	public void sendRequestTeardown() throws IOException {
 		String request = "TEARDOWN "+ mUrl +" RTSP/1.0\r\n" + addHeaders()+end;
@@ -528,7 +560,7 @@ public class RtspConnection implements Closeable{
 		return mInputStream;
 	}
 
-    final protected static char[] hexArray = {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
+	final protected static char[] hexArray = {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
 
 	private static String bytesToHex(byte[] bytes) {
 		char[] hexChars = new char[bytes.length * 2];
@@ -596,7 +628,7 @@ public class RtspConnection implements Closeable{
 				throw new SocketException("Connection lost");
 			}
 
-			while(!line.startsWith("RTSP")){
+			while(!line.contains("RTSP")){
 				line = input.readLine();
 				if(line == null){
 					throw new SocketException("Connection lost");
@@ -612,7 +644,7 @@ public class RtspConnection implements Closeable{
 			// Parsing headers of the request
 			while ( (line = input.readLine()) != null) {
 				if (line.length()>3) {
-				    responseStr.append(line).append(end);
+					responseStr.append(line).append(end);
 					matcher = rexegHeader.matcher(line);
 					if(matcher.find()){
 						response.headers.put(matcher.group(1).toLowerCase(Locale.US),
@@ -623,7 +655,7 @@ public class RtspConnection implements Closeable{
 				}
 			}
 
-            DebugLog.info("Response:"+responseStr);
+			DebugLog.info("Response:"+responseStr);
 			if(response.headers.containsKey("content-length")){
 				int content_len = Integer.valueOf(response.headers.get("content-length"));
 				if(content_len>0){
@@ -632,8 +664,8 @@ public class RtspConnection implements Closeable{
 			}
 
 			if(!TextUtils.isEmpty(response.content)){
-                DebugLog.info("Response content:\r\n"+response.content);
-            }
+				DebugLog.info("Response content:\r\n"+response.content);
+			}
 
 			response.responseStr = responseStr.toString();
 			return response;

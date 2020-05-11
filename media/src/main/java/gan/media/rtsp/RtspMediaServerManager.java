@@ -220,7 +220,7 @@ public class RtspMediaServerManager implements BaseListener,SocketListener{
             mLogger.log("parseToken rtsp:%s",rtsp);
             logger.log("parseToken rtsp:%s",rtsp);
             String token = MediaUtils.parseToken(rtsp);
-            RtspConnection connection=null;
+            RtspClient connection=null;
             try{
                 mLogger.log("ifWait token:%s",token);
                 logger.log("ifWait token:%s",token);
@@ -233,15 +233,15 @@ public class RtspMediaServerManager implements BaseListener,SocketListener{
                 String rtspUrl = MediaUtils.parseUrl(rtsp);
                 mLogger.log("rtspConnection rtspUrl:%s",rtspUrl);
                 logger.log("rtspConnection rtspUrl:%s",rtspUrl);
-                RtspConnection rtspConnection = new RtspConnection(rtspUrl,userName,password);
-                rtspConnection.connect();
-                connection = rtspConnection;
-                if(rtspConnection.sendRequestOption()){
-                    RtspConnection.Response response =rtspConnection.sendRequestDESCRIBE();
+                RtspClient rtspClient = new RtspClient(rtspUrl,userName,password);
+                rtspClient.connect();
+                connection = rtspClient;
+                if(rtspClient.sendRequestOption()){
+                    RtspClient.Response response =rtspClient.sendRequestDESCRIBE();
                     if(response.status==200) {
-                        if (rtspConnection.sendRequestSetup2()) {
-                            if(rtspConnection.sendRequestPlay()){
-                                RtspMediaServer server = addSession(new RtspConnectionMediaSession(rtspConnection));
+                        if (rtspClient.sendRequestSetup2()) {
+                            if(rtspClient.sendRequestPlay()){
+                                RtspMediaServer server = addSession(new RtspConnectionMediaSession(rtspClient));
                                 if(server!=null){
                                     server.setHasAudio(request.hasAudio);
                                     server.setOutputEmptyAutoFinish(true);
@@ -255,30 +255,30 @@ public class RtspMediaServerManager implements BaseListener,SocketListener{
                                             @Override
                                             public void run() {
                                                 try {
-                                                    server.putInputStream(rtspConnection.mInputStream);
+                                                    server.putInputStream(rtspClient.mInputStream);
                                                 } catch (IOException e) {
                                                     //
                                                 }finally {
                                                     removeSession(server.getSession());
-                                                    SystemUtils.close(rtspConnection);
+                                                    SystemUtils.close(rtspClient);
                                                 }
                                             }
                                         });
                                     }
                                 }else{
-                                    SystemUtils.close(rtspConnection);
+                                    SystemUtils.close(rtspClient);
                                 }
                             }else{
-                                SystemUtils.close(rtspConnection);
+                                SystemUtils.close(rtspClient);
                             }
                         }else{
-                            SystemUtils.close(rtspConnection);
+                            SystemUtils.close(rtspClient);
                         }
                     }else{
-                        SystemUtils.close(rtspConnection);
+                        SystemUtils.close(rtspClient);
                     }
                 }else{
-                    SystemUtils.close(rtspConnection);
+                    SystemUtils.close(rtspClient);
                 }
             }catch (Exception e){
                 DebugLog.debug(e.getMessage());
