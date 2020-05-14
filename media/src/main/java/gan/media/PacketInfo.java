@@ -1,6 +1,7 @@
 package gan.media;
 
 import gan.core.Recycleable;
+import gan.media.utils.ByteUtils;
 
 import java.nio.ByteBuffer;
 
@@ -91,6 +92,10 @@ public class PacketInfo implements Recycleable {
         return mBufferInfo.offsetLength();
     }
 
+    public BufferInfo getBufferInfo() {
+        return mBufferInfo;
+    }
+
     @Override
     public String toString() {
         if(mBufferInfo!=null){
@@ -162,6 +167,14 @@ public class PacketInfo implements Recycleable {
 
     public short getShort(int index){
         return mByteBuffer.getShort(index);
+    }
+
+    public boolean resizeBuffer(int size){
+        if(size>mByteBuffer.array().length){
+            mByteBuffer = ByteUtils.ensureBufferCapacity(size,mByteBuffer);
+            return true;
+        }
+        return false;
     }
 
 }
