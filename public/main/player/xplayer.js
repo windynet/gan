@@ -38,7 +38,8 @@
             this.status = 0;
             this.playing = false;
             this.buffer = [];
-            this.muted = false;
+            this.mMuted = false;
+            this.mDecodeType = 0;
             this.init(el,wsUri);
         }
 
@@ -65,6 +66,12 @@
             clearInterval(this.IntervalReconect);
             this.freeMediaSource();
             this.freeDecoder();
+        }
+
+        //在初始化的时候设置
+        //0 自适应 1 服务器转流 2 本地js解码
+        decodeType(type){
+            this.mDecodeType = type;
         }
 
         playFile(url) {
@@ -163,6 +170,7 @@
                 this.onVideoError(msg, code);
             }
         }
+
         getShotImgData(){
             if(this.video){
                 var canvas = document.createElement("canvas");
@@ -192,17 +200,17 @@
             this.removeVideoElement();
             var video= this.video = document.createElement("video");
             this.video.autoplay = true;
-            this.video.muted = this.muted;
+            this.video.muted = this.mMuted;
             this.video.style.width = '100%';
             this.video.style.height = '100%';
-            this.video.style.muted = true;
+            this.video.style.muted = this.mMuted;
             this.video.className = 'x-video-tag';
             this.video.controls=false;
             this.video.oncontextmenu= function () {
                 return false
             }
             this.video.oncanplay=function () {
-                video.muted = this.muted;
+                video.muted = this.mMuted;
                 video.play();
             }
             if (!this.fixSize) {
@@ -219,7 +227,7 @@
                 this.video.src = URL.createObjectURL(this.mediaSource);
                 this.playing = true;
                 this.onVideoEvent(0, 0, "h264 started");
-                this.video.muted = this.muted;
+                this.video.muted = this.mMuted;
                 this.video.play();
             } else {
                 this.onVideoEvent(1, 3, "错误:3");
@@ -228,7 +236,7 @@
         }
 
         muted(muted){
-            this.muted = muted;
+            this.mMuted = muted;
             if(this.video){
                 this.video.muted = muted;
                 this.video.play();
@@ -278,7 +286,7 @@
             }
         }
 
-        initH265Decoder(mimeCodec){
+        initJsDecoder(mimeCodec){
             this.removeVideoElement();
             var canvas = this.canvas = document.createElement("canvas");
             canvas.style.width = '100%';
@@ -332,7 +340,7 @@
                 }
             };
             decoder.postMessage({action: "play"});
-            this.onVideoEvent(0, 0, "h265 started");
+            this.onVideoEvent(0, 0, "decoder started");
         }
 
         freeMediaSource() {
@@ -397,7 +405,7 @@
             var json = {
                 url: this.url,
                 hasAudio: this.hasAudio,
-                mediaType: this.mediaType,
+                decodeType: this.mDecodeType,
                 ver: this.ver
             };
             this.websocket.send(JSON.stringify(json));
@@ -423,7 +431,7 @@
                     console.log("start RECONNECTED");
                     this.replay();
                     this.reconnectCount++;
-            }, 5000);
+                }, 5000);
             }
         }
 
@@ -447,13 +455,22 @@
                     var data = JSON.parse(msg.data);
                     if (data && data.ok && data.mediacodec) {
                         console.log("mediacodec:" + data.mediacodec);
-                        if (data.mediacodec.toLowerCase().indexOf("h265") != -1) {
-                            this.initH265Decoder(data.mediacodec);
+
+                        if(this.mDecodeType==0){
+                            if (data.mediacodec.toLowerCase().indexOf("h265") != -1) {
+                                this.initJsDecoder(data.mediacodec);
+                            } else {
+                                this.initMediaSource(data.mediacodec);
+                            }
                             this.meidaInited = true;
-                        } else {
-                            this.meidaInited = true;
+                        }else if(this.mDecodeType == 1){
                             this.initMediaSource(data.mediacodec);
+                            this.meidaInited = true;
+                        }else if(this.mDecodeType == 2){
+                            this.initJsDecoder(data.mediacodec);
+                            this.meidaInited = true;
                         }
+
                     } else {
                         console.log(msg.data);
                         this.onVideoEvent(1, 1,"错误:1");
@@ -466,6 +483,8 @@
                 }
             }
         }
+
+
 
         onError() {
             console.log("websocket onError");
@@ -773,6 +792,9 @@
         }
         replay(){
             this.player.replay();
+        }
+        muted(muted){
+            this.player.muted(muted);
         }
         fullscreen(){
         }

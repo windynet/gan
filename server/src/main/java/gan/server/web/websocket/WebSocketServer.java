@@ -29,7 +29,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class WebSocketServer extends BaseServer {
 
-    final static String Tag = WebSocketServer.class.getName();
     final static String end = "\r\n";
 
     protected MediaSession mSession;
@@ -157,7 +156,7 @@ public class WebSocketServer extends BaseServer {
 
         String url;
         double ver;
-        int mediaType;
+        PlayMessage playMessage;
         MediaSource mMediaSource;
         MediaOutputStreamRunnable mOutputStreamRunnable;
         AtomicBoolean start = new AtomicBoolean();
@@ -166,17 +165,21 @@ public class WebSocketServer extends BaseServer {
         public OutputRunnale(MediaSource source,String url,PlayMessage playMessage){
             this.mMediaSource = source;
             this.url = url;
+            this.playMessage = playMessage;
             mLogger = RtspMediaServerManager.getLogger(url);
             mLogger.log("OutputRunnale url:%s",url);
             if(playMessage!=null){
                 ver = playMessage.ver;
-                mediaType = playMessage.mediaType;
             }
             start.set(true);
         }
 
         public boolean isClosed(){
             return !start.get();
+        }
+
+        public boolean isDecoderType(int type){
+            return playMessage!=null&&playMessage.decodeType == type;
         }
 
         @Override
@@ -190,15 +193,16 @@ public class WebSocketServer extends BaseServer {
                     }
                     mLogger.log("startOutputStream url:%s",url);
                     MediaOutputInfo mediaOutputSession = createMediaOutputSession(url);
-                    if(mediaType==2){
+                    if(playMessage.mediaType==2){
                         mOutputStreamRunnable = new MediaOutputStreamRunnable1(
                                 new MediaOutputStreamSession(mSession),
                                 mediaOutputSession, 32768, MediaOutputStreamRunnable.PacketType_None);
                     }else{
                         MediaConfig mp4Config = getMediaConfig(ver, mMediaSource);
                         MediaOutputStream outputStream;
-                        if(mp4Config.isVideoCodec(Media.MediaCodec.CODEC_H265)){
-                            mLogger.log("isVideoCodec h265");
+                        if(mp4Config.isVideoCodec(Media.MediaCodec.CODEC_H265)
+                                || isDecoderType(2)){
+                            mLogger.log("decodeType 2");
                             outputStream = new MediaOutputStreamSession(mSession);
                             MediaOutputStreamRunnableFrame outputStreamRunnable = new MediaOutputStreamRunnableFrame(
                                     outputStream, mediaOutputSession);
@@ -216,6 +220,7 @@ public class WebSocketServer extends BaseServer {
                 mMediaSource.addMediaOutputStreamRunnable(mOutputStreamRunnable);
                 mOutputStreamRunnable.start();
             }catch (Throwable e){
+                e.printStackTrace();
                 FileLogger.getExceptionLogger().log(e);
             }finally {
                 mMediaSource.removeMediaOutputStreamRunnable(mOutputStreamRunnable);
@@ -243,7 +248,8 @@ public class WebSocketServer extends BaseServer {
                                     RtspMediaServer server = (RtspMediaServer) mMediaSource;
                                     if(server!=null){
                                         Object tag = server.getIdTag("replay");
-                                        if(tag!=null &&((Boolean)tag)){//回放
+                                        if(tag!=null
+                                                &&((Boolean)tag)){//回放
                                         }
                                     }
                                 }
@@ -413,13 +419,15 @@ public class WebSocketServer extends BaseServer {
         public String url;
         public double ver;
         public int mediaType;
+        public int decodeType;
 
         @Override
         public String toString() {
             return "PlayMessage{" +
                     "url='" + url + '\'' +
                     ", ver=" + ver +
-                    ", mediaType='" + mediaType + '\'' +
+                    ", mediaType=" + mediaType +
+                    ", decodeType=" + decodeType +
                     '}';
         }
     }
