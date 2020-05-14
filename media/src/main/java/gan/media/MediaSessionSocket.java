@@ -49,7 +49,7 @@ public class MediaSessionSocket implements MediaSession<Socket>{
 
     @Override
     public void sendMessage(byte[] b, int off, int len) throws IOException{
-        mSocket.getOutputStream().write(b);
+        mSocket.getOutputStream().write(b, off, len);
     }
 
     @Override
