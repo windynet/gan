@@ -592,7 +592,8 @@ public class RtspMediaServer extends MediaServer implements RtspSource{
         MediaOutputStreamRunnable runnable = null;
         try{
             MediaOutputInfo mediaOutputSession =createMediaOutputSession();
-            runnable = new RtspOutputStreamRunnable(new RtspTcpOutputStream(outputStream),mediaOutputSession);
+            runnable = new RtspOutputStreamRunnable(new RtspTcpOutputStream(mMediaSession),
+                    mediaOutputSession);
             mediaSource.addMediaOutputStreamRunnable(runnable);
             runnable.start();//阻塞
         }finally {

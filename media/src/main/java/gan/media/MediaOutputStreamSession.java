@@ -12,6 +12,10 @@ public class MediaOutputStreamSession implements MediaOutputStream{
         mMediaSession = mediaSession;
     }
 
+    public MediaSession getMediaSession() {
+        return mMediaSession;
+    }
+
     @Override
     public void init() {
 
