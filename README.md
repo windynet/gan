@@ -8,7 +8,7 @@
 ##软件架构
 软件架构说明
 
-![image](./doc/project.png)
+![image](./doc/project.jpg)
 
 ##安装教程
 
