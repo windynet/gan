@@ -59,7 +59,7 @@ public class RtspController extends BaseController {
         }
         MediaRequest request = MediaRequest.obtainRequest(token);
         try{
-            final MediaSource source = MediaServerManager.getInstance().getMediaSource(request);
+            final MediaSource source = MediaServerManager.getInstance().findMediaSource(request);
             if(source==null){
                 return Result.error("找不到数据源");
             }

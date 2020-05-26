@@ -1,27 +1,22 @@
 package gan.server;
 
 import android.os.Looper;
-import gan.core.Platform;
-import gan.core.file.FileHelper;
 import gan.core.file.SharePerference;
-import gan.core.system.SystemUtils;
 import gan.core.system.server.SystemServer;
-import gan.core.utils.TextUtils;
 import gan.log.DebugLog;
 import gan.log.FileLogger;
 import gan.media.MediaApplication;
+import gan.media.ffmpeg.FfmpegMediaServerManager;
 import gan.media.rtsp.RtspMediaServerManager;
+import gan.server.config.FFmepg;
+import gan.server.config.Gan;
 import gan.web.config.MediaConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ApplicationContext;
-import gan.server.config.FFmepg;
-import gan.server.config.Gan;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.logging.Logger;
 
 @SpringBootApplication(
@@ -61,17 +56,6 @@ public class GanServer extends MediaApplication {
             DebugLog.setLevel(DebugLog.INFO);
         }
         super.onCreate(context);
-        String rtmpPid = getSharePerference().getString("rtmp_pid");
-        if(!TextUtils.isEmpty(rtmpPid)){
-            try{
-                String name = getSharePerference().getString("rtmp_name");
-                SystemUtils.killProcessByName(name);
-            }catch (Exception e){
-            }finally {
-                getSharePerference().remove("rtmp_pid").remove("rtmp_name").commit();
-            }
-        }
-
         MediaConfig config = getMediaConfig();
         if(config.rtspEnable){
             DebugLog.info( "rtsp_port:"+config.rtspPort);
@@ -85,45 +69,13 @@ public class GanServer extends MediaApplication {
         if(gan.jt1078Enable){
         }
 
-        if(gan.rtmpEnable){
-            getMainHandler().postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    startRtmp();
-                }
-            },1000);
-        }
-
-        if(gan.deviceEnable){
-        }
-    }
-
-    private void startRtmp(){
         try {
-            DebugLog.info( "rtmp_port:"+gan.rtmpPort);
-            Runtime runtime = Runtime.getRuntime();
-            String os = System.getProperty("os.name");
-            String cmd = null;
-            String dir = null;
-            if(os.toLowerCase().startsWith("win")){
-                dir = Platform.getAbsolutePath("/nginx-rtmp");
-                cmd = Platform.getAbsolutePath("/nginx-rtmp/nginx");
-                FileHelper.checkOrCreateFolder(Platform.getAbsolutePath("/nginx-rtmp/logs/"));
-            }else{
-                dir = Platform.getAbsolutePath("/nginx");
-                cmd = Platform.getAbsolutePath("/nginx/sbin/nginx");
-                FileHelper.checkOrCreateFolder(Platform.getAbsolutePath("/nginx/logs/"));
-                FileHelper.checkOrCreateFolder(Platform.getAbsolutePath("/nginx/temp/hls/"));
-            }
-
-            DebugLog.debug( "rtmp server cmd:"+cmd);
-            Process process = runtime.exec(cmd,null,new File(dir));
-            getSharePerference().putString("rtmp_pid", SystemUtils.getProcessId(process)+"")
-                    .putString("rtmp_name","nginx").commit();
-            DebugLog.info( "rtmpServer start");
-        } catch (IOException e) {
-            DebugLog.warn( "rtmpServer start fail:"+e.getMessage());
+            this.getClass().getClassLoader().loadClass(FfmpegMediaServerManager.class.getName());
+            addManager(FfmpegMediaServerManager.getInstance());
+        } catch (ClassNotFoundException e) {
             e.printStackTrace();
+        }
+        if(gan.rtmpEnable){
         }
     }
 

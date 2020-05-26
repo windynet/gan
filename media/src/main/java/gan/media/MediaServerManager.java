@@ -1,13 +1,13 @@
 package gan.media;
 
+import gan.core.file.FileHelper;
+import gan.core.system.server.SystemServer;
 import gan.log.DebugLog;
 import gan.log.FileLogger;
-import gan.core.file.FileHelper;
 import gan.media.file.MediaSessionFile;
 import gan.media.file.MediaSourceFile;
 import gan.media.rtsp.RtspMediaServerManager;
 import gan.media.utils.MediaUtils;
-import gan.core.system.server.SystemServer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -59,10 +59,7 @@ public class MediaServerManager {
      */
     public MediaSourceResult getMediaSourceResult(MediaRequest request,int type){
         MediaSourceResult result = MediaSourceResult.error("");
-        MediaSource source = mMapMediaSource.get(request.url);
-        if(source==null){
-            source = mMapMediaSource.get(request.getToken());
-        }
+        MediaSource source = getMediaSource(request);
         if(source==null){
             String name = MediaUtils.parseName(request.url);
             if(isFileUrl(name)){
@@ -77,11 +74,8 @@ public class MediaServerManager {
         }
     }
 
-    public MediaSource getMediaSource(MediaRequest request){
-        MediaSource source = mMapMediaSource.get(request.url);
-        if(source==null){
-            source = mMapMediaSource.get(request.getToken());
-        }
+    public MediaSource findMediaSource(MediaRequest request){
+        MediaSource source = getMediaSource(request);
         if(source==null){
             String name = MediaUtils.parseName(request.url);
             if(isFileUrl(name)){
@@ -94,12 +88,16 @@ public class MediaServerManager {
         return source;
     }
 
-    private boolean isFileUrl(String name){
-        if(name.startsWith("http")
-                ||name.startsWith("rtsp")
-                ||name.startsWith("https")){
-           name = MediaUtils.parseName(name);
+    public MediaSource getMediaSource(MediaRequest request){
+        MediaSource source = mMapMediaSource.get(request.url);
+        if(source==null){
+            source = mMapMediaSource.get(request.getToken());
         }
+        return source;
+    }
+
+    private boolean isFileUrl(String name){
+        name = MediaUtils.parseName(name);
         return name.startsWith("file")
                 ||name.startsWith("/file");
     }
@@ -114,16 +112,13 @@ public class MediaServerManager {
 
     private MediaSourceResult internalGetMediaSourceResult(MediaRequest request,int type){
         boolean byPull = true;
-        MediaSource source = RtspMediaServerManager.getInstance()
-                .getRtspSource(request.getToken());
+        MediaSource source = RtspMediaServerManager.getInstance().getRtspSource(request.getToken());
         if(source==null){
             MediaSourceResult result = MediaSourceResult.error();
-            if(request.isRtspURL()){
-                for(MediaSourceAdapter sourceAdapter:mMediaSourceAdapters){
-                    if(sourceAdapter.accept(request)){
-                        result = sourceAdapter.getMediaSourceResult(request);
-                        byPull=type==1;
-                    }
+            for(MediaSourceAdapter sourceAdapter:mMediaSourceAdapters){
+                if(sourceAdapter.accept(request)){
+                    result = sourceAdapter.getMediaSourceResult(request);
+                    byPull=type==1;
                 }
             }
             if(!result.ok){
@@ -144,11 +139,9 @@ public class MediaServerManager {
         MediaSource source = RtspMediaServerManager.getInstance()
                 .getRtspSource(request.getToken());
         if(source==null){
-            if(request.isRtspURL()){
-                for(MediaSourceAdapter sourceAdapter:mMediaSourceAdapters){
-                    if(sourceAdapter.accept(request)){
-                        source = sourceAdapter.getMediaSource(request);
-                    }
+            for(MediaSourceAdapter sourceAdapter:mMediaSourceAdapters){
+                if(sourceAdapter.accept(request)){
+                    source = sourceAdapter.getMediaSource(request);
                 }
             }
             if(source==null){
