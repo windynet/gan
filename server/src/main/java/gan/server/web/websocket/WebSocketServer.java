@@ -208,7 +208,7 @@ public class WebSocketServer extends BaseServer {
                                     outputStream, mediaOutputSession);
                             mOutputStreamRunnable = outputStreamRunnable;
                         }else{
-                            mLogger.log("isVideoCodec h264");
+                            mLogger.log("decodeType:%s",playMessage.decodeType);
                             outputStream = new WebSocketOutputStream(mMediaSource.getUri(), mSession, mp4Config);
                             MediaOutputStreamRunnableFrame outputStreamRunnable = new MediaOutputStreamRunnableFrame(
                                     outputStream, mediaOutputSession);

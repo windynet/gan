@@ -9,6 +9,7 @@ import gan.media.MediaSessionString;
 import gan.media.MediaSource;
 import gan.media.PacketInfo;
 import gan.media.h26x.HUtils;
+import gan.media.rtsp.Rtsp2Fmp4ServerPlugin;
 import gan.media.rtsp.RtspMediaServer;
 import gan.media.rtsp.Sdp;
 
@@ -44,6 +45,7 @@ public class FfmpegPullMediaService implements Runnable, FrameCallBack {
         mLogger = FfmpegMediaServerManager.getLogger(url);
         mRtspMediaServer = SystemServer.startServer(RtspMediaServer.class, new MediaSessionString(url));
         mRtspMediaServer.setHasAudio(false);
+        mRtspMediaServer.registerPlugin(new Rtsp2Fmp4ServerPlugin());
         mRtspMediaServer.setOutputEmptyAutoFinish(true);
         mRtspMediaServer.startInputStream(url, Sdp.SDP_OnlyVideo);
         mRtspMediaServer.registerPlugin(new ServerPlugin<RtspMediaServer>(){
