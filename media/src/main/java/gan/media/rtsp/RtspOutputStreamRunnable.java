@@ -19,7 +19,7 @@ public class RtspOutputStreamRunnable extends MediaOutputStreamRunnable1 {
         super.discardPacketInCache(packetInfos, pool);
         PacketInfo info = packetInfos.get(0);
         if(info!=null){
-            if(info.channel()==0){
+            if(info.isChannel(0)){
                 if(isSpsOrPpsOrIType(info)){
                     packetInfos.clear();
                     return;

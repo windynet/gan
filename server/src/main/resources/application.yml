@@ -4,7 +4,7 @@ ffmpeg:
 
 #gan
 gan:
-    debug: false
+    debug: true
     log_level: 2
 
     media:

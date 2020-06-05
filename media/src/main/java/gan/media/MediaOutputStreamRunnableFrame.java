@@ -28,7 +28,7 @@ public class MediaOutputStreamRunnableFrame implements MediaOutputStreamRunnable
     InterceptPacketListener mInterceptPacketListener;
 
     public MediaOutputStreamRunnableFrame(MediaOutputStream out, MediaOutputInfo mediaSession){
-        this(out,mediaSession,10, MediaApplication.getMediaConfig().rtspFrameBufferSize);
+        this(out,mediaSession,20, MediaApplication.getMediaConfig().rtspFrameBufferSize);
     }
 
     public MediaOutputStreamRunnableFrame(MediaOutputStream out, MediaOutputInfo mediaSession, int poolSize, int capacity){
@@ -77,12 +77,12 @@ public class MediaOutputStreamRunnableFrame implements MediaOutputStreamRunnable
     private int index;
     private int mTempFrameRate;
     private int mFrameRate;
-    private long videoOriginSampleTime = 0;
-    private long videoCurSampleTime = -1;
-    private long videoOffseSampelTime = -1;
-    private long audioOriginSampleTime = 0;
-    private long audioCurSampleTime = -1;
-    private long audioOffseSampelTime = -1;
+    private long videoOriginSampleTime;
+    private long videoCurSampleTime;
+    private long videoOffsetSampelTime;
+    private long audioOriginSampleTime;
+    private long audioCurSampleTime;
+    private long audioOffsetSampelTime;
     public void putPacket(byte channel, byte[] packet, int offset,int len, long time){
         if(mColsed.get()){
             DebugLog.debug("Runnable isClosed");
@@ -131,12 +131,12 @@ public class MediaOutputStreamRunnableFrame implements MediaOutputStreamRunnable
 
     private void updateSampleTime(byte channel,long time) {
         if(channel == 0) {
-            if (videoOffseSampelTime<0 && videoOriginSampleTime > 0) {
-                videoOffseSampelTime = time - videoOriginSampleTime;
+            if (videoOffsetSampelTime <=0 && videoOriginSampleTime > 0) {
+                videoOffsetSampelTime = time - videoOriginSampleTime;
             }
         }else {
-            if (audioOffseSampelTime<0 && audioOriginSampleTime > 0) {
-                audioOffseSampelTime = time - audioOriginSampleTime;
+            if (audioOffsetSampelTime <=0 && audioOriginSampleTime > 0) {
+                audioOffsetSampelTime = time - audioOriginSampleTime;
             }
         }
     }
@@ -152,16 +152,16 @@ public class MediaOutputStreamRunnableFrame implements MediaOutputStreamRunnable
     private void putPacketInfo2(byte channel, byte[] packet, int offset,int len, long pts){
         //DebugLog.debug(String.format("channel:%s,offset:%s,len:%s,pts:%s", channel,offset,len,pts));
         if(channel==0){
-            if (videoCurSampleTime < 0) { videoCurSampleTime = pts;}
-            videoCurSampleTime += fixVideoSampleTimeOffset(videoOffseSampelTime);
+            if (videoCurSampleTime <= 0) { videoCurSampleTime = pts;}
+            videoCurSampleTime += fixVideoSampleTimeOffset(videoOffsetSampelTime);
             videoOriginSampleTime = pts;
-            videoOffseSampelTime = -1;
+            videoOffsetSampelTime = 0;
             putPacketInfo(channel, packet, offset, len, videoCurSampleTime);
         }else{
-            if (audioCurSampleTime < 0) { audioCurSampleTime = pts;}
-            audioCurSampleTime += audioOffseSampelTime;
+            if (audioCurSampleTime <= 0) { audioCurSampleTime = pts;}
+            audioCurSampleTime += audioOffsetSampelTime;
             audioOriginSampleTime = pts;
-            audioOffseSampelTime = -1;
+            audioOffsetSampelTime = 0;
             putPacketInfo(channel, packet, offset, len, audioCurSampleTime);
         }
     }

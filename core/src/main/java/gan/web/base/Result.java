@@ -16,7 +16,7 @@ public class Result {
 	public long servertime;
 
 	@SuppressWarnings("rawtypes")
-	public HashMap datas = new HashMap<>();
+	public HashMap datas;
 
 	public static Result ok(){
 		return new Result().asOk();

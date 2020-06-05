@@ -5,6 +5,13 @@
 直播、点播 视频流媒体服务器。
 推流，拉流，使用rtsp协议。支持海康，大华摄像头拉流，支持APP和网页播放同时播放
 
+支持播放rtmp,hls流
+使用rtsp播放rtmp/hls地址
+在地址前加rtsp
+
+列子: 
+rtsp://{serverIp}:{rtspPort}/rtmp://202.69.69.180:443/webcast/bshdlive-pc
+
 ##软件架构
 软件架构说明
 
@@ -27,11 +34,9 @@ maven parent 执行install执行完成
 ##启动服务
 
 ###windos平台
-
 直接执行start.bat
  
 ###linux平台
-1. 首先配置环境 vi envsetup.sh 把版本号修改到最新2.0.0
 2. 启动 
     1. source envsetup.sh 
     2. sh start.sh

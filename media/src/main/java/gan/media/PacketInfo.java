@@ -75,6 +75,10 @@ public class PacketInfo implements Recycleable {
         return mBufferInfo.channel;
     }
 
+    public boolean isChannel(int channel){
+        return mBufferInfo.channel == channel;
+    }
+
     public PacketInfo time(long time){
         mBufferInfo.time = time;
         return this;
