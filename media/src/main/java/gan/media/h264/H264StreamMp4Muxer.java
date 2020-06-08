@@ -1,12 +1,10 @@
 package gan.media.h264;
 
-import gan.log.DebugLog;
-import gan.core.file.FileHelper;
-import gan.media.MediaApplication;
 import gan.core.system.SystemUtils;
-import gan.core.system.server.SystemServer;
+import gan.log.DebugLog;
 import gan.media.BufferInfo;
 import gan.media.Media;
+import gan.media.MediaApplication;
 import gan.media.MediaConfig;
 import gan.media.h26x.HUtils;
 import gan.media.mp4.MP4StreamMuxer;
@@ -15,7 +13,6 @@ import gan.media.mp4.Mp4MuxerImpl;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 
 public class H264StreamMp4Muxer extends Mp4MuxerImpl implements MP4StreamMuxer {
@@ -119,6 +116,7 @@ public class H264StreamMp4Muxer extends Mp4MuxerImpl implements MP4StreamMuxer {
     }
 
     ByteBuffer mByteBufferTemp;
+    ByteBuffer mAACTempBuffer = ByteBuffer.allocate(12000);
     boolean sps,pps;
     @Override
     public void write(byte channel, ByteBuffer packet, BufferInfo bufferInfo) throws IOException {
@@ -274,8 +272,17 @@ public class H264StreamMp4Muxer extends Mp4MuxerImpl implements MP4StreamMuxer {
                                     getAudioTime(bufferInfo.time, 0));
                             DebugLog.info("aacTrack:"+aacTrack);
                             checkStart();
-                        }else {
-                            throw new UnsupportedEncodingException("不支持的音频编码格式");
+                        }else{
+                            int packetLen = bufferInfo.length+7;
+                            byte[] data = new byte[7];
+                            addADTStoPacket(data, packetLen);
+                            mAACTempBuffer.clear();
+                            mAACTempBuffer.put(data);
+                            mAACTempBuffer.put(packet.array(), bufferInfo.offset, bufferInfo.length);
+                            aacTrack = addAudioTrack(mAACTempBuffer.array(), 0, packetLen,
+                                    getAudioTime(bufferInfo.time, 0));
+                            DebugLog.info("aacTrack:"+aacTrack);
+                            checkStart();
                         }
                     }
                 }

@@ -2,7 +2,6 @@ package gan.media;
 
 import gan.core.file.FileHelper;
 import gan.core.system.server.SystemServer;
-import gan.log.DebugLog;
 import gan.log.FileLogger;
 import gan.media.file.MediaSessionFile;
 import gan.media.file.MediaSourceFile;
@@ -52,23 +51,18 @@ public class MediaServerManager {
         }
     }
 
+    private static boolean isFileSource(MediaSource source){
+        return source.isFlag(Media.FLAG_FILE_SOURCE);
+    }
+
     /**
-     *
-     * @param type 0,默认不走pull,1,走pull,2,其他
      * @return
      */
-    public MediaSourceResult getMediaSourceResult(MediaRequest request,int type){
-        MediaSourceResult result = MediaSourceResult.error("");
+    public MediaSourceResult getMediaSourceResult(MediaRequest request){
         MediaSource source = getMediaSource(request);
-        if(source==null){
-            String name = MediaUtils.parseName(request.url);
-            if(isFileUrl(name)){
-                result = getFileMediaSourceResult(name);
-            }
-            if(!result.ok){
-                result = internalGetMediaSourceResult(request, type);
-            }
-            return result;
+        if(source==null
+                ||isFileSource(source)){
+            return internalGetMediaSourceResult(request);
         }else{
             return MediaSourceResult.ok(source);
         }
@@ -76,55 +70,41 @@ public class MediaServerManager {
 
     public MediaSource findMediaSource(MediaRequest request){
         MediaSource source = getMediaSource(request);
-        if(source==null){
-            String name = MediaUtils.parseName(request.url);
-            if(isFileUrl(name)){
-                source = getFileMediaSource(name);
-            }
-            if(source==null){
-                source = getRtspSource(request, true);
-            }
+        if(source==null
+                ||isFileSource(source)){
+            source = getRtspSource(request);
         }
         return source;
     }
 
+    public MediaSource getMediaSource(String url){
+        MediaRequest request = MediaRequest.obtainRequest(url);
+        try{
+            return getMediaSource(request);
+        }finally {
+            request.recycle();
+        }
+    }
+
     public MediaSource getMediaSource(MediaRequest request){
         MediaSource source = mMapMediaSource.get(request.url);
+        if(source==null){
+            source = mMapMediaSource.get(request.getName());
+        }
         if(source==null){
             source = mMapMediaSource.get(request.getToken());
         }
         return source;
     }
 
-    private boolean isFileUrl(String name){
-        name = MediaUtils.parseName(name);
-        return name.startsWith("file")
-                ||name.startsWith("/file");
-    }
-
-    public MediaSource getRtspSource(String url){
-        return getRtspSource(MediaRequest.obtainRequest(url));
-    }
-
-    public MediaSource getRtspSource(MediaRequest request){
-        return getRtspSource(request,true);
-    }
-
-    private MediaSourceResult internalGetMediaSourceResult(MediaRequest request,int type){
-        boolean byPull = true;
+    private MediaSourceResult internalGetMediaSourceResult(MediaRequest request){
         MediaSource source = RtspMediaServerManager.getInstance().getRtspSource(request.getToken());
-        if(source==null){
+        if(source==null
+                ||isFileSource(source)){
             MediaSourceResult result = MediaSourceResult.error();
             for(MediaSourceAdapter sourceAdapter:mMediaSourceAdapters){
                 if(sourceAdapter.accept(request)){
                     result = sourceAdapter.getMediaSourceResult(request);
-                    byPull=type==1;
-                }
-            }
-            if(!result.ok){
-                if(byPull){
-                    DebugLog.info(String.format("getRtspSourceByPull :%s", request.toString()));
-                    result = RtspMediaServerManager.getInstance().getMediaSourceResultByPull(request);
                 }
             }
             dumpSource(result.mediaSource);
@@ -135,19 +115,13 @@ public class MediaServerManager {
         }
     }
 
-    public MediaSource getRtspSource(MediaRequest request,boolean byPull){
-        MediaSource source = RtspMediaServerManager.getInstance()
-                .getRtspSource(request.getToken());
-        if(source==null){
+    public MediaSource getRtspSource(MediaRequest request){
+        MediaSource source = RtspMediaServerManager.getInstance().getRtspSource(request.getToken());
+        if(source==null
+                ||isFileSource(source)){
             for(MediaSourceAdapter sourceAdapter:mMediaSourceAdapters){
                 if(sourceAdapter.accept(request)){
                     source = sourceAdapter.getMediaSource(request);
-                }
-            }
-            if(source==null){
-                if(byPull){
-                    DebugLog.info(String.format("getRtspSourceByPull :%s", request.toString()));
-                    source = RtspMediaServerManager.getInstance().getRtspSourceByPull(request);
                 }
             }
         }
@@ -170,14 +144,6 @@ public class MediaServerManager {
             return source;
         }
         return null;
-    }
-
-    public MediaSourceResult getFileMediaSourceResult(final String uri){
-        MediaSource source = getFileMediaSource(uri);
-        if(source!=null){
-            return MediaSourceResult.ok(source);
-        }
-        return MediaSourceResult.error("文件不存在");
     }
 
 }

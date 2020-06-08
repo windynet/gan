@@ -1,9 +1,12 @@
 package gan.media.rtsp;
 
 import android.os.Handler;
+import gan.core.system.SystemUtils;
+import gan.core.system.server.ServerListener;
+import gan.core.system.server.SystemServer;
+import gan.core.utils.TextUtils;
 import gan.log.DebugLog;
 import gan.log.FileLogger;
-import gan.core.utils.TextUtils;
 import gan.media.*;
 import gan.media.h264.H264Utils;
 import gan.media.parser.PSOverTcpStreamParser;
@@ -12,9 +15,6 @@ import gan.media.parser.StreamParser;
 import gan.media.utils.MediaUtils;
 import gan.network.MapValueBuilder;
 import gan.network.NetParamsMap;
-import gan.core.system.SystemUtils;
-import gan.core.system.server.ServerListener;
-import gan.core.system.server.SystemServer;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -26,6 +26,7 @@ public class RtspMediaServer extends MediaServer implements RtspSource{
     final static String charsetName = "UTF-8";
 
     private FileLogger mLogger;
+    private int mFlags;
     private String mSdpStr;
     private Sdp mSdp;
     private String mRtspUrl;
@@ -326,19 +327,18 @@ public class RtspMediaServer extends MediaServer implements RtspSource{
             return;
         }
 
-        MediaSource mediaSource;
         MediaRequest mediaRequest = MediaRequest.obtainRequest(mRtspUrl);
+        MediaSource mediaSource;
         try{
-            mediaSource = MediaServerManager.getInstance().getRtspSource(mediaRequest,false);
+            mediaRequest.setAutoPull(false);
+            mediaSource = MediaServerManager.getInstance().findMediaSource(mediaRequest);
             if(mediaSource==null){
-                if(MediaUtils.isRtspURL(mName)){
-                    mLogger.log("isRtspURL:%s", mName);
-                    if(MediaUtils.isLocalURL(mName)){
-                        mLogger.log("isLocalURL:%s", mName);
-                    }else{
-                        mediaRequest.setUrl(mName);
-                        mediaSource = RtspMediaServerManager.getInstance().getRtspSourceByPull(mediaRequest);
-                    }
+                if(MediaUtils.isLocalURL(mName)){
+                    mLogger.log("isLocalURL:%s", mName);
+                }else{
+                    mediaRequest.setUrl(mName);
+                    mediaRequest.setAutoPull(true);
+                    mediaSource = MediaServerManager.getInstance().findMediaSource(mediaRequest);
                 }
                 if(mediaSource==null){
                     DebugLog.info("找不到数据源");
@@ -545,12 +545,12 @@ public class RtspMediaServer extends MediaServer implements RtspSource{
         return new MediaSourceInfo(getId(), getUri(),mName);
     }
 
-    public MediaOutputInfo createMediaOutputSession(){
+    public MediaOutputInfo createMediaOutputInfo(){
         return new MediaOutputInfo(getId(),mRtspUrl,mName);
     }
 
     public synchronized void stopInputStream(){
-        DebugLog.info("stopInputStream rtspUrl:"+mRtspUrl);
+        DebugLog.info("stopInputStream url:"+mRtspUrl);
         try{
             mInputStreaming = false;
             if(mStreamParser!=null){
@@ -582,7 +582,7 @@ public class RtspMediaServer extends MediaServer implements RtspSource{
     protected void startOutputStream(OutputStream outputStream)throws IOException{
         rtspSessionEnd();
         DebugLog.info(mRtspUrl+":"+"startOutputStream");
-        MediaSource mediaSource = MediaServerManager.getInstance().getRtspSource(mRtspUrl);
+        MediaSource mediaSource = MediaServerManager.getInstance().getMediaSource(mRtspUrl);
         if(mediaSource == null){
             finish();
             return;
@@ -591,9 +591,8 @@ public class RtspMediaServer extends MediaServer implements RtspSource{
         mOutputStreaming = true;
         MediaOutputStreamRunnable runnable = null;
         try{
-            MediaOutputInfo mediaOutputSession =createMediaOutputSession();
-            runnable = new RtspOutputStreamRunnable(new RtspTcpOutputStream(mMediaSession),
-                    mediaOutputSession);
+            MediaOutputInfo mediaOutputInfo= createMediaOutputInfo();
+            runnable = new RtspOutputStreamRunnable(new RtspTcpOutputStream(mMediaSession), mediaOutputInfo);
             mediaSource.addMediaOutputStreamRunnable(runnable);
             runnable.start();//阻塞
         }finally {
@@ -1010,6 +1009,19 @@ public class RtspMediaServer extends MediaServer implements RtspSource{
                 "url=" + mRtspUrl + "\'"+
                 "mSdpStr='" + mSdpStr + '\'' +
                 '}';
+    }
+
+    @Override
+    public boolean isFlag(int flag) {
+        return (mFlags&flag)==flag;
+    }
+
+    public int addFlag(int flags){
+        return  mFlags |= flags;
+    }
+
+    public void setFlag(int flag){
+        mFlags = flag;
     }
 
     public static interface OnFrameCallBackPlugin extends ServerListener{

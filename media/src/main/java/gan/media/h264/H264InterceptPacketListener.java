@@ -1,10 +1,10 @@
 package gan.media.h264;
 
 import gan.log.DebugLog;
-import gan.media.MediaOutputStreamRunnableFrame;
+import gan.media.InterceptPacketListener;
 import gan.media.h26x.HUtils;
 
-public class H264InterceptPacketListener implements MediaOutputStreamRunnableFrame.InterceptPacketListener {
+public class H264InterceptPacketListener implements InterceptPacketListener {
 
     private final static String TAG = H264InterceptPacketListener.class.getName();
 

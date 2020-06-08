@@ -4,6 +4,7 @@ import gan.web.base.Result;
 
 public class MediaSourceResult extends Result {
 
+    public boolean isFile;
     public MediaSource mediaSource;
 
     public MediaSource getMediaSource() {
@@ -29,12 +30,28 @@ public class MediaSourceResult extends Result {
                 .setMessage(message);
     }
 
+    public boolean isOk(){
+        return ok;
+    }
+
+    public boolean isError(){
+        return !ok;
+    }
+
     public static boolean isOk(MediaSourceResult result){
         return result!=null&&result.ok;
     }
 
     public static boolean isError(MediaSourceResult result){
         return result==null||!result.ok;
+    }
+
+    public boolean isFile() {
+        return isFile;
+    }
+
+    public void setFile(boolean file) {
+        isFile = file;
     }
 
 }

@@ -17,6 +17,7 @@ public abstract class MediaSourceAbstract extends MediaServer implements MediaSo
     MediaOutputStreamRunnableList mOutputStreamRunnables;
     private boolean mOutputEmptyAutoFinish = false;
     private volatile boolean mIsInputing;
+    private int mFlags;
 
     @Override
     protected void onCreateSession(MediaSession session) {
@@ -212,4 +213,19 @@ public abstract class MediaSourceAbstract extends MediaServer implements MediaSo
         this.mOutputEmptyAutoFinish = outputEmptyAutoFinish;
         return this;
     }
+
+
+    public void setFlags(int flags) {
+        this.mFlags = flags;
+    }
+
+    @Override
+    public boolean isFlag(int flag) {
+        return (mFlags&flag)==flag;
+    }
+
+    public int addFlag(int flags){
+        return  mFlags |= flags;
+    }
+
 }

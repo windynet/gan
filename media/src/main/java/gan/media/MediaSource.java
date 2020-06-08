@@ -25,4 +25,5 @@ public interface MediaSource {
 
     public boolean capture(MediaCaptureCallBack captureCallBack);
 
+    public boolean isFlag(int flag);
 }

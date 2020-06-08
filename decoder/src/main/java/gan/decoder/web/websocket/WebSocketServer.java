@@ -94,7 +94,6 @@ public class WebSocketServer extends BaseServer {
         }
 
         FileLogger logger = DecoderApplication.getLogger(url);
-
         MediaRequest request = MediaRequest.obtainRequest(url);
         try{
             double ver = jo.optDouble("ver");

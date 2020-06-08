@@ -1,15 +1,18 @@
 package gan.media.rtsp;
 
-import gan.core.*;
+import gan.core.BaseListener;
+import gan.core.MapKeyLock;
+import gan.core.PluginHelper;
+import gan.core.SyncPluginHelper;
+import gan.core.system.SystemUtils;
+import gan.core.system.server.SystemServer;
+import gan.core.utils.TextUtils;
 import gan.log.DebugLog;
 import gan.log.FileLogger;
-import gan.core.utils.TextUtils;
 import gan.media.*;
 import gan.media.utils.MediaUtils;
 import gan.network.SocketGroupManager;
 import gan.network.SocketListener;
-import gan.core.system.SystemUtils;
-import gan.core.system.server.SystemServer;
 import gan.web.config.MediaConfig;
 
 import java.io.IOException;
@@ -21,7 +24,7 @@ import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class RtspMediaServerManager implements BaseListener,SocketListener{
+public class RtspMediaServerManager implements BaseListener,SocketListener,MediaSourceAdapter{
 
     static {
         sInstance = new RtspMediaServerManager();
@@ -45,6 +48,7 @@ public class RtspMediaServerManager implements BaseListener,SocketListener{
     private static FileLogger mLogger = FileLogger.getInstance("/rtsp/info");
 
     private RtspMediaServerManager(){
+        mMediaServerManager.addMediaSourceAdapter(this);
         final MediaConfig config = MediaApplication.getMediaConfig();
         try {
             DebugLog.info("rtspServer start");
@@ -66,10 +70,6 @@ public class RtspMediaServerManager implements BaseListener,SocketListener{
 
     public static FileLogger getLogger() {
         return mLogger;
-    }
-
-    public void destory(){
-        onDestory();
     }
 
     protected void onDestory(){
@@ -217,6 +217,9 @@ public class RtspMediaServerManager implements BaseListener,SocketListener{
         logger.log("getRtspSourceByPull rtsp:%s",rtsp);
         mLogger.log("getRtspSourceByPull rtsp:%s",rtsp);
         if(MediaUtils.isRtspURL(rtsp)){
+            if(MediaUtils.isLocalURL(rtsp)){
+                return MediaSourceResult.error("not find");
+            }
             mLogger.log("parseToken rtsp:%s",rtsp);
             logger.log("parseToken rtsp:%s",rtsp);
             String token = MediaUtils.parseToken(rtsp);
@@ -362,6 +365,33 @@ public class RtspMediaServerManager implements BaseListener,SocketListener{
 
     public static void removeManager(Object manager){
         pluginHelper.removeManager(manager);
+    }
+
+    @Override
+    public boolean accept(MediaRequest request) {
+        if(request.url.startsWith("rtsp")){
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public MediaSource getMediaSource(MediaRequest request) {
+        return getMediaSourceResult(request).mediaSource;
+    }
+
+    @Override
+    public MediaSourceResult getMediaSourceResult(MediaRequest request) {
+        MediaSource source = getRtspSource(request.url);
+        if(source!=null){
+            return MediaSourceResult.ok(source);
+        }else{
+            if(request.isAutoPull()){
+                return getMediaSourceResultByPull(request);
+            }else{
+                return MediaSourceResult.error("not find");
+            }
+        }
     }
 
 }

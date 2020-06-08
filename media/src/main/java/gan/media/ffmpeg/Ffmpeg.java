@@ -1,6 +1,8 @@
 package gan.media.ffmpeg;
 
+import gan.core.file.FileHelper;
 import gan.core.system.SystemUtils;
+import gan.core.utils.TextUtils;
 import gan.log.DebugLog;
 
 import java.io.FileOutputStream;
@@ -50,18 +52,30 @@ public class Ffmpeg {
     }
 
     public int call(String format_name, String url){
-        return call(handle, format_name, url);
+        return nativeOpen(handle, format_name, url);
+    }
+
+    public long duration(){
+        return nativeDuration(handle, null, null);
+    }
+
+    public long seek(long seek){
+        return nativeSeek(handle, seek);
     }
 
     public int parseFrame(){
         return loopFrame(handle);
     }
 
-    public void call(String url){
-        call(handle, guessFormatName(url), url);
+    public int call(String url){
+        return nativeOpen(handle, guessFormatName(url), url);
     }
 
     private String guessFormatName(String url){
+        String ext = FileHelper.getFileExt(url,null);
+        if(!TextUtils.isEmpty(ext)){
+            return ext.trim().toLowerCase();
+        }
         if(url.startsWith("rtmp")){
             return "flv";
         }
@@ -72,7 +86,13 @@ public class Ffmpeg {
 
     private native int nativeDestroy(long handle);
 
-    private native int call(long handle,String format_name,String url);
+    private native int nativeOpen(long handle,String format_name,String url);
 
     private native int loopFrame(long handle);
+
+    private native long nativeDuration(long handle,String format_name,String url);
+
+    private native long nativeCurrentTime(long handle);
+
+    private native long nativeSeek(long handle, long seekTime);
 }

@@ -7,8 +7,8 @@ import java.nio.ByteBuffer;
 
 public class PacketInfo implements Recycleable {
 
-    ByteBuffer mByteBuffer;
-    BufferInfo mBufferInfo;
+    protected ByteBuffer mByteBuffer;
+    protected BufferInfo mBufferInfo;
     private int putIndex;
 
     public PacketInfo(int capacity){
@@ -29,6 +29,10 @@ public class PacketInfo implements Recycleable {
     public static PacketInfo wrap(byte[] array, int offset, int length){
         PacketInfo packetInfo = new PacketInfo(ByteBuffer.wrap(array, offset, length),new BufferInfo());
         return packetInfo;
+    }
+
+    public ByteBuffer getByteBuffer() {
+        return mByteBuffer;
     }
 
     public int limit(){

@@ -16,6 +16,7 @@ public class MediaRequest {
 
     public String url;
     public boolean hasAudio;
+    private boolean isAutoPull = true;
 
     private MediaRequest(String url){
         this.url = url;
@@ -66,6 +67,18 @@ public class MediaRequest {
 
     public void parseFormJSONObject(JSONObject jo){
         JsonParseUtils.parse(jo, this);
+    }
+
+    public String getName(){
+        return MediaUtils.parseName(url);
+    }
+
+    public boolean isAutoPull() {
+        return isAutoPull;
+    }
+
+    public void setAutoPull(boolean autoPull) {
+        isAutoPull = autoPull;
     }
 
 }

@@ -35,6 +35,9 @@ public class MediaUtils {
         try{
             URI uri = URI.create(url);
             String host = uri.getHost();
+            if(TextUtils.isEmpty(host)){
+                return false;
+            }
             if(isLocalIP(host)){
                 return true;
             }
@@ -203,16 +206,16 @@ public class MediaUtils {
         return "rtsp://"+host+":"+gan.rtspPort+"/"+rtsp;
     }
 
-    public static String parseName(String rtsp){
+    public static String parseName(String url){
         try{
-            if(rtsp.contains("://")){
-                final String temp = rtsp.substring(rtsp.indexOf("://")+3);
+            if(url.contains("://")){
+                final String temp = url.substring(url.indexOf("://")+3);
                 return temp.substring(temp.indexOf("/")+1);
             }
         }catch (Exception e){
             e.printStackTrace();
         }
-        return rtsp;
+        return url;
     }
 
     public static boolean isRtspURL(String url){

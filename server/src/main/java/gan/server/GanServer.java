@@ -7,6 +7,7 @@ import gan.log.DebugLog;
 import gan.log.FileLogger;
 import gan.media.MediaApplication;
 import gan.media.ffmpeg.FfmpegMediaServerManager;
+import gan.media.file.FileMediaServerManager;
 import gan.media.rtsp.RtspMediaServerManager;
 import gan.server.config.FFmepg;
 import gan.server.config.Gan;
@@ -75,6 +76,14 @@ public class GanServer extends MediaApplication {
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
+
+        try {
+            this.getClass().getClassLoader().loadClass(FileMediaServerManager.class.getName());
+            addManager(FileMediaServerManager.getInstance());
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+
         if(gan.rtmpEnable){
         }
     }

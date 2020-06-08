@@ -2,6 +2,10 @@ package gan.media;
 
 public class Media {
 
+    /**
+     * 文件 源
+     */
+    public final static int FLAG_FILE_SOURCE = 0x00000001;
 
     public static class MediaCodec{
         public final static String CODEC_AAC = "aac";

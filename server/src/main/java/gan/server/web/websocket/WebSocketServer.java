@@ -8,6 +8,7 @@ import gan.core.utils.TextUtils;
 import gan.log.DebugLog;
 import gan.log.FileLogger;
 import gan.media.*;
+import gan.media.file.MediaOutputStreamRunnableFile;
 import gan.media.file.MediaSourceFile;
 import gan.media.h264.H264InterceptPacketListener;
 import gan.media.mp4.Fmp4;
@@ -80,27 +81,6 @@ public class WebSocketServer extends BaseServer {
     }
 
     /**
-     * 使用ffmpeg 拉流rtsp,输出为MP4
-     * @throws IOException
-     */
-    public void rtsp2mp4()throws IOException{
-        Fmp4 fmp4 = new Fmp4();
-        fmp4.setMp4DataCallBack(new Mp4DataCallBack() {
-            @Override
-            public void onMp4(byte[] data, int length) {
-                try {
-                    mSession.sendMessage(data);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    finish();
-                }
-            }
-        });
-        fmp4.rtsp2mp4(mToken,null);
-    }
-
-
-    /**
      *解析帧数据合成MP4
      * @throws IOException
      */
@@ -122,7 +102,8 @@ public class WebSocketServer extends BaseServer {
         MediaRequest request = MediaRequest.obtainRequest(url);
         try{
             request.parseFormJSONObject(jo);
-            MediaSourceResult result = MediaServerManager.getInstance().getMediaSourceResult(request, playMessage.mediaType);
+            MediaSourceResult result = MediaServerManager.getInstance()
+                    .getMediaSourceResult(request);
             if(MediaSourceResult.isError(result)){
                 logger.log("startOutputStream fail no source url:%s",url);
                 try {
@@ -146,6 +127,7 @@ public class WebSocketServer extends BaseServer {
                 }
             }
             mOutputStreaming.set(true);
+            playMessage.setFile(result.isFile);
             SystemServer.executeThread(mOutputRunnale = new OutputRunnale(result.mediaSource, url,playMessage));
         }finally {
             request.recycle();
@@ -193,32 +175,29 @@ public class WebSocketServer extends BaseServer {
                     }
                     mLogger.log("startOutputStream url:%s",url);
                     MediaOutputInfo mediaOutputSession = createMediaOutputSession(url);
-                    if(playMessage.mediaType==2){
-                        mOutputStreamRunnable = new MediaOutputStreamRunnable1(
-                                new MediaOutputStreamSession(mSession),
-                                mediaOutputSession, 32768, MediaOutputStreamRunnable.PacketType_None);
-                    }else{
-                        MediaConfig mp4Config = getMediaConfig(ver, mMediaSource);
-                        MediaOutputStream outputStream;
-                        if(mp4Config.isVideoCodec(Media.MediaCodec.CODEC_H265)
-                                || isDecoderType(2)){
-                            mLogger.log("decodeType 2");
-                            outputStream = new MediaOutputStreamSession(mSession);
-                            MediaOutputStreamRunnableFrame outputStreamRunnable = new MediaOutputStreamRunnableFrame(
-                                    outputStream, mediaOutputSession);
-                            mOutputStreamRunnable = outputStreamRunnable;
+                    MediaConfig mp4Config = getMediaConfig(ver, mMediaSource);
+                    MediaOutputStream outputStream;
+                    if(mp4Config.isVideoCodec(Media.MediaCodec.CODEC_H265)
+                            || isDecoderType(2)){
+                        mLogger.log("decodeType 2");
+                        outputStream = new MediaOutputStreamSession(mSession);
+                        mOutputStreamRunnable = new MediaOutputStreamRunnableFrame(outputStream, mediaOutputSession);
+                    }else {
+                        mLogger.log("decodeType:%s",playMessage.decodeType);
+                        outputStream = new WebSocketOutputStream(mMediaSource.getUri(), mSession, mp4Config);
+                        if(playMessage.isFile){
+                            mOutputStreamRunnable= new MediaOutputStreamRunnableFile(outputStream, mediaOutputSession)
+                                    .setInterceptPacketListener(new H264InterceptPacketListener());
                         }else{
-                            mLogger.log("decodeType:%s",playMessage.decodeType);
-                            outputStream = new WebSocketOutputStream(mMediaSource.getUri(), mSession, mp4Config);
-                            MediaOutputStreamRunnableFrame outputStreamRunnable = new MediaOutputStreamRunnableFrame(
-                                    outputStream, mediaOutputSession);
-                            outputStreamRunnable.setInterceptPacketListener(new H264InterceptPacketListener());
-                            mOutputStreamRunnable=outputStreamRunnable;
+                            mOutputStreamRunnable = new MediaOutputStreamRunnableFrame(outputStream, mediaOutputSession)
+                                    .setInterceptPacketListener(new H264InterceptPacketListener());
                         }
                     }
                 }
-                mMediaSource.addMediaOutputStreamRunnable(mOutputStreamRunnable);
-                mOutputStreamRunnable.start();
+                if(mOutputStreamRunnable!=null){
+                    mMediaSource.addMediaOutputStreamRunnable(mOutputStreamRunnable);
+                    mOutputStreamRunnable.start();
+                }
             }catch (Throwable e){
                 e.printStackTrace();
                 FileLogger.getExceptionLogger().log(e);
@@ -420,6 +399,15 @@ public class WebSocketServer extends BaseServer {
         public double ver;
         public int mediaType;
         public int decodeType;
+        public boolean isFile;
+
+        public void setFile(boolean file) {
+            isFile = file;
+        }
+
+        public boolean isFile() {
+            return isFile;
+        }
 
         @Override
         public String toString() {

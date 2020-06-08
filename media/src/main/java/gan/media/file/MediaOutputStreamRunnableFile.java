@@ -1,17 +1,17 @@
-package gan.media;
+package gan.media.file;
+
 
 import gan.log.DebugLog;
 import gan.log.FileLogger;
-import gan.media.h264.H264Utils;
+import gan.media.*;
 import gan.media.h26x.HUtils;
-import gan.web.config.MediaConfig;
 
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class MediaOutputStreamRunnableFrame implements MediaOutputStreamRunnable {
+public class MediaOutputStreamRunnableFile implements MediaOutputStreamRunnable {
 
     public final static int Status_Online = 0;
     public final static int Status_Offline = 1;
@@ -22,25 +22,25 @@ public class MediaOutputStreamRunnableFrame implements MediaOutputStreamRunnable
     private int mPacketBufferMaxCount=10;
     PacketInfoRecyclePool mByteBufferPool;
     private AtomicBoolean mClosed = new AtomicBoolean(false);
-    MediaOutputInfo mMediaSession;
+    MediaOutputInfo mMediaInfo;
     protected String mPacketType;
-    public long mSleepTime;
     InterceptPacketListener mInterceptPacketListener;
+    private long currentVideoTime;
 
-    public MediaOutputStreamRunnableFrame(MediaOutputStream out, MediaOutputInfo mediaSession){
-        this(out,mediaSession,20, MediaApplication.getMediaConfig().rtspFrameBufferSize);
+    public MediaOutputStreamRunnableFile(MediaOutputStream out, MediaOutputInfo mediaInfo){
+        this(out,mediaInfo,10, MediaApplication.getMediaConfig().rtspFrameBufferSize);
     }
 
-    public MediaOutputStreamRunnableFrame(MediaOutputStream out, MediaOutputInfo mediaSession, int poolSize, int capacity){
+    public MediaOutputStreamRunnableFile(MediaOutputStream out, MediaOutputInfo mediaInfo, int poolSize, int capacity){
         mOutputStream = out;
         mRtspPacketInfos = new Vector<>(poolSize);
         mByteBufferPool = new PacketInfoRecyclePool(poolSize,capacity);
         mPacketBufferMaxCount = poolSize;
-        mMediaSession = mediaSession;
+        mMediaInfo = mediaInfo;
         mPacketType = MediaOutputStreamRunnable.PacketType_Frame;
     }
 
-    public MediaOutputStreamRunnableFrame setPacketBufferMaxCount(int packetBufferMaxCount) {
+    public MediaOutputStreamRunnableFile setPacketBufferMaxCount(int packetBufferMaxCount) {
         if(packetBufferMaxCount<1){
             throw new IllegalArgumentException("packetBufferMaxCount must>=1");
         }
@@ -48,7 +48,7 @@ public class MediaOutputStreamRunnableFrame implements MediaOutputStreamRunnable
         return this;
     }
 
-    public MediaOutputStreamRunnableFrame setInterceptPacketListener(InterceptPacketListener interceptPacketListener) {
+    public MediaOutputStreamRunnableFile setInterceptPacketListener(InterceptPacketListener interceptPacketListener) {
         this.mInterceptPacketListener = interceptPacketListener;
         return this;
     }
@@ -62,7 +62,7 @@ public class MediaOutputStreamRunnableFrame implements MediaOutputStreamRunnable
 
     @Override
     public MediaInfo getMediaInfo() {
-        return mMediaSession;
+        return mMediaInfo;
     }
 
     @Override
@@ -74,9 +74,6 @@ public class MediaOutputStreamRunnableFrame implements MediaOutputStreamRunnable
         return mStatus == Status_Offline;
     }
 
-    private int index;
-    private int mTempFrameRate;
-    private int mFrameRate;
     private long videoOriginSampleTime;
     private long videoCurSampleTime;
     private long videoOffsetSampelTime;
@@ -90,40 +87,26 @@ public class MediaOutputStreamRunnableFrame implements MediaOutputStreamRunnable
         }
 
         updateSampleTime(channel,time);
+
         if(onInterceptPacket(channel,packet,offset,len,time)){
             DebugLog.debug("onInterceptPacket true");
             return;
         }
 
-        if(isBufferLarge()){
-            if (H264Utils.isSPS(packet,offset,len)
-                    ||H264Utils.isIFrame(packet,offset,len)){
-                DebugLog.info("bufferLarge");
-            }else{
-                return ;
-            }
-        }
-
         if(channel==0){
-            if(isClientLargeBuffer()){
-                if(H264Utils.isSPS(packet,offset,len)
-                        ||H264Utils.isIFrame(packet,offset,len)){
-                    mTempFrameRate = mFrameRate;
-                    index =0;
-                    putPacketInfo2(channel, packet, offset, len, time);
-                    return;
-                }
-                if(mTempFrameRate>0){
-                    if(index < mTempFrameRate){
-                        index++;
-                        putPacketInfo2(channel, packet, offset, len, time);
+            if(isBufferLarge()){
+                synchronized (this){
+                    if(mClosed.get()){
+                        return;
                     }
-                }else{
-                    putPacketInfo2(channel, packet, offset, len, time);
+                    try {
+                        wait(time-currentVideoTime);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
-            }else{
-                putPacketInfo2(channel, packet, offset, len, time);
             }
+            putPacketInfo2(channel, packet, offset, len, time);
         }else{
             putPacketInfo2(channel, packet, offset, len, time);
         }
@@ -141,24 +124,15 @@ public class MediaOutputStreamRunnableFrame implements MediaOutputStreamRunnable
         }
     }
 
-    public long fixVideoSampleTimeOffset(long offset){
-        if(offset>20000||offset<0){
-            DebugLog.debug("fixVideoSampleTimeOffset offset:%s",offset);
-            return 3600;
-        }
-        return offset;
-    }
-
     private void putPacketInfo2(byte channel, byte[] packet, int offset,int len, long pts){
-        //DebugLog.debug(String.format("channel:%s,offset:%s,len:%s,pts:%s", channel,offset,len,pts));
         if(channel==0){
-            if (videoCurSampleTime <= 0) { videoCurSampleTime = pts;}
-            videoCurSampleTime += fixVideoSampleTimeOffset(videoOffsetSampelTime);
+            if (videoCurSampleTime < 0) { videoCurSampleTime = pts;}
+            videoCurSampleTime += videoOffsetSampelTime;
             videoOriginSampleTime = pts;
             videoOffsetSampelTime = 0;
             putPacketInfo(channel, packet, offset, len, videoCurSampleTime);
         }else{
-            if (audioCurSampleTime <= 0) { audioCurSampleTime = pts;}
+            if (audioCurSampleTime < 0) { audioCurSampleTime = pts;}
             audioCurSampleTime += audioOffsetSampelTime;
             audioOriginSampleTime = pts;
             audioOffsetSampelTime = 0;
@@ -167,9 +141,10 @@ public class MediaOutputStreamRunnableFrame implements MediaOutputStreamRunnable
     }
 
     private void putPacketInfo(byte channel, byte[] packet, int offset,int len, long pts){
+        pts = Math.max(0,pts);
         PacketInfo rtspPacketInfo = mByteBufferPool.poll();
         try{
-            System.arraycopy(packet, offset, rtspPacketInfo.mByteBuffer.array(), 0, len);
+            System.arraycopy(packet, offset, rtspPacketInfo.array(), 0, len);
             rtspPacketInfo.length(len).offset(0).channel(channel).time(pts);
             mRtspPacketInfos.add(rtspPacketInfo);
         }catch (Exception e){
@@ -211,11 +186,7 @@ public class MediaOutputStreamRunnableFrame implements MediaOutputStreamRunnable
         mRtspPacketInfos.add(info);
     }
 
-    public void setColsed(boolean colsed) {
-        this.mClosed.set(colsed);
-    }
-
-    public boolean isColsed() {
+    public boolean isClosed() {
         return mClosed.get();
     }
 
@@ -238,20 +209,6 @@ public class MediaOutputStreamRunnableFrame implements MediaOutputStreamRunnable
         long currentTime = System.currentTimeMillis();
         long timex = currentTime-lastSleepTime;
         if(timex>2000){//每隔2s更新一次帧率
-            MediaConfig mediaConfig = MediaApplication.getMediaConfig();
-            lastSleepTime = currentTime;
-            this.mSleepTime = sleepTime;
-            if(mSleepTime>=20000){
-                mFrameRate = 1;
-            }else if(mSleepTime>=8000){
-                mFrameRate = mediaConfig.rtspMinFrameRate;
-            }else if(mSleepTime>=6000){
-                mFrameRate = mediaConfig.rtspMinFrameRate+2;
-            }else if(mSleepTime>=4000){
-                mFrameRate = mediaConfig.rtspMinFrameRate+4;
-            }else {
-                mFrameRate = 0;
-            }
         }
     }
 
@@ -267,10 +224,17 @@ public class MediaOutputStreamRunnableFrame implements MediaOutputStreamRunnable
                 if(!mRtspPacketInfos.isEmpty()){
                     PacketInfo rtspPacketInfo;
                     rtspPacketInfo = mRtspPacketInfos.remove(0);
-                    ByteBuffer byteBuffer = rtspPacketInfo.mByteBuffer;
-                    BufferInfo bufferInfo = rtspPacketInfo.mBufferInfo;
+                    ByteBuffer byteBuffer = rtspPacketInfo.getByteBuffer();
+                    BufferInfo bufferInfo = rtspPacketInfo.getBufferInfo();
+                    if(bufferInfo.channel==0){
+                        currentVideoTime = bufferInfo.time;
+                    }
                     mOutputStream.write(bufferInfo.channel,byteBuffer,bufferInfo);
                     mByteBufferPool.recycle(rtspPacketInfo);
+                }else{
+                    synchronized (this){
+                        notifyAll();
+                    }
                 }
                 try{
                     Thread.sleep(1);
@@ -282,40 +246,39 @@ public class MediaOutputStreamRunnableFrame implements MediaOutputStreamRunnable
             FileLogger.getExceptionLogger().log(e);
             DebugLog.warn(e.getMessage());
         }finally {
-            mClosed.set(true);
-            mOutputStream.close();
-            for(PacketInfo rtspPacketInfo : mRtspPacketInfos){
-                rtspPacketInfo.clear();
+            try{
+                mClosed.set(true);
+                mOutputStream.close();
+                for(PacketInfo rtspPacketInfo : mRtspPacketInfos){
+                    rtspPacketInfo.clear();
+                }
+                mRtspPacketInfos.clear();
+                mByteBufferPool.release();
+                DebugLog.info("thread end");
+            }finally {
+                synchronized (this){
+                    notifyAll();
+                }
             }
-            mRtspPacketInfos.clear();
-            mByteBufferPool.release();
-            DebugLog.info("thread end");
         }
     }
 
     public void close() {
         DebugLog.info("close");
         mClosed.set(true);
+        try{
+            Thread.interrupted();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
     public boolean isBufferLarge(){
         return isBufferLarge(mPacketBufferMaxCount);
     }
 
-    /**
-     * 播放端通知服务，缓存过大，延迟大
-     * @return
-     */
-    public boolean isClientLargeBuffer(){
-        if(MediaApplication.getMediaConfig().rtspAutoFrameRate){
-            return mSleepTime>0;
-        }
-        return false;
-    }
-
     public boolean isBufferLarge(int count){
         return mRtspPacketInfos.size()>count;
     }
-
 }
 
