@@ -10,13 +10,13 @@ import gan.core.system.server.SystemServer;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-public class RtspDataDecoderPlugin extends ServerPlugin<RtspMediaServer> implements RtspMediaServer.OnFrameCallBackPlugin, MediaOutputStream, RawDataCallBack {
+public class RtspDataDecoderPlugin extends ServerPlugin<RtspMediaService> implements RtspMediaService.OnFrameCallBackPlugin, MediaOutputStream, RawDataCallBack {
 
     MediaOutputStreamRunnableFrame mMediaOutputStreamRunnable;
     NativeDecoder mDecoder;
     FileLogger mLogger;
 
-    public static RtspDataDecoderPlugin singleInstance(RtspMediaServer server){
+    public static RtspDataDecoderPlugin singleInstance(RtspMediaService server){
         RtspDataDecoderPlugin plugin = (RtspDataDecoderPlugin) server.getIdTag(RtspDataDecoderPlugin.class.getName());
         if(plugin==null){
             server.registerPlugin(plugin = new RtspDataDecoderPlugin());
@@ -26,9 +26,9 @@ public class RtspDataDecoderPlugin extends ServerPlugin<RtspMediaServer> impleme
     }
 
     @Override
-    protected void onCreate(RtspMediaServer server) {
+    protected void onCreate(RtspMediaService server) {
         super.onCreate(server);
-        mLogger = RtspMediaServerManager.getLogger(server.getUrl());
+        mLogger = RtspMediaServiceManager.getLogger(server.getUrl());
         MediaOutputInfo outInfo = new MediaOutputInfo(server.getUrl());
         mMediaOutputStreamRunnable = new MediaOutputStreamRunnableFrame(this, outInfo);
         SystemServer.executeThread(mMediaOutputStreamRunnable);

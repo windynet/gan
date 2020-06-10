@@ -1,8 +1,8 @@
 package gan.core.system.server;
 
-public class ServerInfo {
+public class ServiceInfo {
     public String id;
-    public ServerInfo(String id){
+    public ServiceInfo(String id){
         this.id = id;
     }
 }

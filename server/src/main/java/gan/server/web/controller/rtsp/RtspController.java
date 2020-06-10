@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import gan.server.GanUtils;
 import gan.media.*;
 import gan.media.mp4.Mp4MeidaOutputStream;
-import gan.media.rtsp.RtspMediaServerManager;
+import gan.media.rtsp.RtspMediaServiceManager;
 import gan.server.web.service.rtsp.RtspService;
 
 import java.util.Collection;
@@ -59,7 +59,7 @@ public class RtspController extends BaseController {
         }
         MediaRequest request = MediaRequest.obtainRequest(token);
         try{
-            final MediaSource source = MediaServerManager.getInstance().findMediaSource(request);
+            final MediaSource source = MediaServiceManager.getInstance().findMediaSource(request);
             if(source==null){
                 return Result.error("找不到数据源");
             }
@@ -100,7 +100,7 @@ public class RtspController extends BaseController {
             String url = checkEmpty("url");
             MediaRequest request = MediaRequest.obtainRequest(url);
             try{
-                RtspMediaServerManager.getInstance().getRtspSourceByPull(request);
+                RtspMediaServiceManager.getInstance().getRtspSourceByPull(request);
                 return Result.ok();
             }finally {
                 request.recycle();

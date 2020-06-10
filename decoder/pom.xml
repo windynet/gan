@@ -52,7 +52,7 @@
         <dependency>
             <groupId>gan</groupId>
             <artifactId>core</artifactId>
-            <version>1.1.6</version>
+            <version>1.2.0</version>
         </dependency>
 
         <dependency>

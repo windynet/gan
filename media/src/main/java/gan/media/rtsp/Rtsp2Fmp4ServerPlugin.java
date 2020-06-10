@@ -13,13 +13,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-public class Rtsp2Fmp4ServerPlugin extends ServerPlugin<RtspMediaServer> implements RtspMediaServer.OnFrameCallBackPlugin,RtspMediaServer.OnMediaOutputStreamRunnableChangedPlugin {
+public class Rtsp2Fmp4ServerPlugin extends ServerPlugin<RtspMediaService> implements RtspMediaService.OnFrameCallBackPlugin,RtspMediaService.OnMediaOutputStreamRunnableChangedPlugin {
 
     MediaOutputStreamRunnableFrame mMediaOutputStreamRunnableFrame;
     byte[] head1,head2;
 
     @Override
-    protected void onCreate(RtspMediaServer server) {
+    protected void onCreate(RtspMediaService server) {
         super.onCreate(server);
         mMediaOutputStreamRunnableFrame = new MediaOutputStreamRunnableFrame(
                 new Mp4MeidaOutputStream(server.getUrl(),null){

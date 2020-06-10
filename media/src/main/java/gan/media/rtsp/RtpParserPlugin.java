@@ -9,12 +9,12 @@ import gan.media.parser.RtpParser;
 
 import java.nio.ByteBuffer;
 
-public class RtpParserPlugin extends ServerPlugin<RtspMediaServer> implements RtpParser.OnParserListener, RtpParser.OnParserFrameListener ,RtspMediaServer.OnStreamStateListenerPlugin {
+public class RtpParserPlugin extends ServerPlugin<RtspMediaService> implements RtpParser.OnParserListener, RtpParser.OnParserFrameListener ,RtspMediaService.OnStreamStateListenerPlugin {
 
     RtpParser mVideoRtpParser;
     RtpParser mAudioRtpParser;
 
-    public static RtpParserPlugin get(RtspMediaServer server){
+    public static RtpParserPlugin get(RtspMediaService server){
         RtpParserPlugin plugin = (RtpParserPlugin) server.getIdTag(RtpParserPlugin.class.getName());
         if(plugin==null){
             server.registerPlugin(plugin = new RtpParserPlugin());

@@ -4,29 +4,29 @@ import gan.core.file.FileHelper;
 import gan.core.system.server.SystemServer;
 import gan.log.FileLogger;
 import gan.media.file.MediaSessionFile;
-import gan.media.file.MediaSourceFile;
-import gan.media.rtsp.RtspMediaServerManager;
+import gan.media.file.MediaSourceFileService;
+import gan.media.rtsp.RtspMediaServiceManager;
 import gan.media.utils.MediaUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class MediaServerManager {
+public class MediaServiceManager {
 
     static {
-        sInstance = new MediaServerManager();
+        sInstance = new MediaServiceManager();
     }
-    private static MediaServerManager sInstance;
+    private static MediaServiceManager sInstance;
 
-    public static MediaServerManager getInstance() {
+    public static MediaServiceManager getInstance() {
         return sInstance;
     }
 
     private ConcurrentHashMap<String, MediaSource> mMapMediaSource;
     private List<MediaSourceAdapter> mMediaSourceAdapters;
 
-    private MediaServerManager(){
+    private MediaServiceManager(){
         mMapMediaSource = new ConcurrentHashMap<>();
         mMediaSourceAdapters = new ArrayList<>();
     }
@@ -98,7 +98,7 @@ public class MediaServerManager {
     }
 
     private MediaSourceResult internalGetMediaSourceResult(MediaRequest request){
-        MediaSource source = RtspMediaServerManager.getInstance().getRtspSource(request.getToken());
+        MediaSource source = RtspMediaServiceManager.getInstance().getRtspSource(request.getToken());
         if(source==null
                 ||isFileSource(source)){
             MediaSourceResult result = MediaSourceResult.error();
@@ -116,7 +116,7 @@ public class MediaServerManager {
     }
 
     public MediaSource getRtspSource(MediaRequest request){
-        MediaSource source = RtspMediaServerManager.getInstance().getRtspSource(request.getToken());
+        MediaSource source = RtspMediaServiceManager.getInstance().getRtspSource(request.getToken());
         if(source==null
                 ||isFileSource(source)){
             for(MediaSourceAdapter sourceAdapter:mMediaSourceAdapters){
@@ -138,9 +138,9 @@ public class MediaServerManager {
     public MediaSource getFileMediaSource(final String uri) {
         String filePath = SystemServer.getPublicPath(uri);
         if(FileHelper.isFileExists(filePath)){
-            MediaSource source = SystemServer.startServer(MediaSourceFile.class, new MediaSessionFile(uri))
+            MediaSource source = SystemServer.startServer(MediaSourceFileService.class, new MediaSessionFile(uri))
                     .setOutputEmptyAutoFinish(true);
-            ((MediaSourceFile) source).startInput();
+            ((MediaSourceFileService) source).startInput();
             return source;
         }
         return null;

@@ -18,7 +18,7 @@ public class WebSocketHandlerRtspControl extends TextWebSocketHandler{
         final String msg = new String(message.asBytes(),"UTF-8");
         DebugLog.info("handleTextMessage:"+ msg);
         NetParamsMap params = new NetParamsMap();
-        String fun = WebSocketServer.parseRequest(msg,params);
+        String fun = WebSocketService.parseRequest(msg,params);
         if (fun.contains("INIT")) {
             onHandleRequestINIT(session,msg,params);
         }else if(fun.contains("WRAP")){
@@ -32,7 +32,7 @@ public class WebSocketHandlerRtspControl extends TextWebSocketHandler{
                 .put("CSeq", params.get("CSeq"))
                 .put("channel",0)
                 .build()));
-        WebSocketServer.responseRequest(session,200, sb.toString(),null);
+        WebSocketService.responseRequest(session,200, sb.toString(),null);
     }
 
     protected void onHandleRequestWRAP(WebSocketSession session,String request,NetParamsMap params){

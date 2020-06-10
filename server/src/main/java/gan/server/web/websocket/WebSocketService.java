@@ -1,34 +1,36 @@
-package gan.decoder.web.websocket;
+package gan.server.web.websocket;
 
 import android.os.JSONObject;
-import gan.decoder.DecoderApplication;
+import gan.core.system.SystemUtils;
+import gan.core.system.server.BaseService;
+import gan.core.system.server.SystemServer;
+import gan.core.utils.TextUtils;
 import gan.log.DebugLog;
 import gan.log.FileLogger;
-import gan.web.base.Result;
-import gan.core.utils.TextUtils;
 import gan.media.*;
-import gan.media.file.MediaSourceFile;
-import gan.media.rtsp.RtspDataDecoderPlugin;
-import gan.media.rtsp.RtspMediaServer;
-import gan.media.rtsp.RtspMediaServerManager;
+import gan.media.file.MediaOutputStreamRunnableFile;
+import gan.media.file.MediaSourceFileService;
+import gan.media.h264.H264InterceptPacketListener;
+import gan.media.rtsp.RtspMediaService;
+import gan.media.rtsp.RtspMediaServiceManager;
 import gan.media.rtsp.RtspSource;
-import gan.core.system.SystemUtils;
-import gan.core.system.server.BaseServer;
-import gan.core.system.server.SystemServer;
-import org.springframework.web.socket.BinaryMessage;
+import gan.network.MapValueBuilder;
+import gan.network.NetParamsMap;
+import gan.web.base.Result;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.nio.ByteBuffer;
+import java.io.StringReader;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class WebSocketServer extends BaseServer {
+public class WebSocketService extends BaseService {
 
     final static String end = "\r\n";
 
-    protected WebSocketSession mSession;
+    protected MediaSession mSession;
     private String mSessionId;
     private String mToken;
     private AtomicBoolean mOutputStreaming = new AtomicBoolean();
@@ -41,21 +43,21 @@ public class WebSocketServer extends BaseServer {
     }
 
     protected void onCreateSession(WebSocketSession session) {
-        DebugLog.info("onCreate:%s",session.getId());
-        mSession = session;
+        DebugLog.info("onCreate:"+session.getId());
+        mSession = new MediaSessionWebSocket(session);
         mSessionId  =  session.getId();
     }
 
     @Override
     protected void onDestory() {
         super.onDestory();
+        DebugLog.info("onDestory:"+mSessionId);
         SystemUtils.close(mSession);
-        DebugLog.info("onDestory:%s", mSessionId);
         stopOutputStream();
     }
 
     protected void onMessage(String message)throws IOException{
-        DebugLog.debug("session:%s,recevie message:%s",mSession.getId(),message);
+        DebugLog.debug("session:"+mSessionId+",recevie message:"+message);
         if(isOutputStreaming()){
             if(mOutputRunnale!=null){
                 mOutputRunnale.control(message);
@@ -72,10 +74,9 @@ public class WebSocketServer extends BaseServer {
         }
     }
 
-    public synchronized boolean isOutputStreaming(){
+    public boolean isOutputStreaming(){
         return mOutputStreaming.get();
     }
-
 
     /**
      *解析帧数据合成MP4
@@ -93,24 +94,27 @@ public class WebSocketServer extends BaseServer {
             return ;
         }
 
-        FileLogger logger = DecoderApplication.getLogger(url);
+        FileLogger logger = RtspMediaServiceManager.getLogger(url);
+        double ver = jo.optDouble("ver");
+        PlayMessage playMessage = SystemUtils.safeJsonValues(jo.toString(),PlayMessage.class);
         MediaRequest request = MediaRequest.obtainRequest(url);
         try{
-            double ver = jo.optDouble("ver");
-            RtspMediaServer source = (RtspMediaServer) RtspMediaServerManager.getInstance().getRtspSourceByPull(request);
-            if(source == null){
+            request.parseFormJSONObject(jo);
+            MediaSourceResult result = MediaServiceManager.getInstance()
+                    .getMediaSourceResult(request);
+            if(MediaSourceResult.isError(result)){
                 logger.log("startOutputStream fail no source url:%s",url);
                 try {
-                    sendMessage(Result.error("没有找到数据源"));
+                    sendMessage(result);
                 } catch (IOException e) {
                     FileLogger.getExceptionLogger().log(e);
                 }
                 finish();
                 return;
             }
-            RtspDataDecoderPlugin.singleInstance(source);
             if(ver>0){
                 try {
+                    MediaSource source = result.mediaSource;
                     sendMessage(new MessageResult()
                             .setMediacodec(source.getMediaCodec())
                             .asOk());
@@ -121,8 +125,8 @@ public class WebSocketServer extends BaseServer {
                 }
             }
             mOutputStreaming.set(true);
-            PlayMessage playMessage = SystemUtils.safeJsonValues(jo.toString(),PlayMessage.class);
-            SystemServer.executeThread(mOutputRunnale = new OutputRunnale(source, url,playMessage));
+            playMessage.setFile(result.isFile);
+            SystemServer.executeThread(mOutputRunnale = new OutputRunnale(result.mediaSource, url,playMessage));
         }finally {
             request.recycle();
         }
@@ -132,7 +136,7 @@ public class WebSocketServer extends BaseServer {
 
         String url;
         double ver;
-        String mediaType;
+        PlayMessage playMessage;
         MediaSource mMediaSource;
         MediaOutputStreamRunnable mOutputStreamRunnable;
         AtomicBoolean start = new AtomicBoolean();
@@ -141,17 +145,21 @@ public class WebSocketServer extends BaseServer {
         public OutputRunnale(MediaSource source,String url,PlayMessage playMessage){
             this.mMediaSource = source;
             this.url = url;
-            mLogger = DecoderApplication.getLogger(url);
+            this.playMessage = playMessage;
+            mLogger = RtspMediaServiceManager.getLogger(url);
             mLogger.log("OutputRunnale url:%s",url);
             if(playMessage!=null){
                 ver = playMessage.ver;
-                mediaType = playMessage.mediaType;
             }
             start.set(true);
         }
 
         public boolean isClosed(){
             return !start.get();
+        }
+
+        public boolean isDecoderType(int type){
+            return playMessage!=null&&playMessage.decodeType == type;
         }
 
         @Override
@@ -164,19 +172,36 @@ public class WebSocketServer extends BaseServer {
                         return;
                     }
                     mLogger.log("startOutputStream url:%s",url);
-                    MediaOutputInfo mediaOutputInfo = createMediaOutputSession(url);
-                    if("video".equals(mediaType)){
-                        mOutputStreamRunnable = new RawDataMediaOutputStreamRunnable(mediaOutputInfo,
-                                new MediaSessionWebSocket(mSession));
-                    }else{
-                        mOutputStreamRunnable = new RawDataMediaOutputStreamRunnable(mediaOutputInfo,
-                                new MediaSessionWebSocket(mSession));
+                    MediaOutputInfo mediaOutputSession = createMediaOutputSession(url);
+                    MediaConfig mp4Config = getMediaConfig(ver, mMediaSource);
+                    MediaOutputStream outputStream;
+                    if(mp4Config.isVideoCodec(Media.MediaCodec.CODEC_H265)
+                            || isDecoderType(2)){
+                        mLogger.log("decodeType 2");
+                        outputStream = new MediaOutputStreamSession(mSession);
+                        mOutputStreamRunnable = new MediaOutputStreamRunnableFrame(outputStream, mediaOutputSession);
+                    }else {
+                        mLogger.log("decodeType:%s",playMessage.decodeType);
+                        outputStream = new WebSocketOutputStream(mMediaSource.getUri(), mSession, mp4Config);
+                        if(playMessage.isFile){
+                            mOutputStreamRunnable= new MediaOutputStreamRunnableFile(outputStream, mediaOutputSession)
+                                    .setInterceptPacketListener(new H264InterceptPacketListener());
+                        }else{
+                            mOutputStreamRunnable = new MediaOutputStreamRunnableFrame(outputStream, mediaOutputSession)
+                                    .setInterceptPacketListener(new H264InterceptPacketListener());
+                        }
                     }
                 }
-                mMediaSource.addMediaOutputStreamRunnable(mOutputStreamRunnable);
-                mOutputStreamRunnable.start();
+                if(mOutputStreamRunnable!=null){
+                    mMediaSource.addMediaOutputStreamRunnable(mOutputStreamRunnable);
+                    mOutputStreamRunnable.start();
+                }
             }catch (Throwable e){
+                e.printStackTrace();
                 FileLogger.getExceptionLogger().log(e);
+            }finally {
+                mMediaSource.removeMediaOutputStreamRunnable(mOutputStreamRunnable);
+                finish();
             }
         }
 
@@ -187,8 +212,8 @@ public class WebSocketServer extends BaseServer {
                         ControlMessage controlMessage = SystemUtils.safeJsonValues(message,ControlMessage.class);
                         if(controlMessage!=null){
                             if(!TextUtils.isEmpty(controlMessage.rtsp)){
-                                if(mMediaSource instanceof RtspMediaServer){
-                                    ((RtspMediaServer)mMediaSource).sendRtspRequest(controlMessage.rtsp);
+                                if(mMediaSource instanceof RtspMediaService){
+                                    ((RtspMediaService)mMediaSource).sendRtspRequest(controlMessage.rtsp);
                                 }
                             }else{
                                 MediaOutputStreamRunnableFrame runnableFrame = ((MediaOutputStreamRunnableFrame)mOutputStreamRunnable);
@@ -196,8 +221,8 @@ public class WebSocketServer extends BaseServer {
                                 /**
                                  * 设备视频回放
                                  */
-                                if(mMediaSource instanceof RtspMediaServer){
-                                    RtspMediaServer server = (RtspMediaServer) mMediaSource;
+                                if(mMediaSource instanceof RtspMediaService){
+                                    RtspMediaService server = (RtspMediaService) mMediaSource;
                                     if(server!=null){
                                         Object tag = server.getIdTag("replay");
                                         if(tag!=null
@@ -213,7 +238,7 @@ public class WebSocketServer extends BaseServer {
                 }
             }catch (Exception e){
                 e.printStackTrace();
-                DebugLog.info("message:%s", message);
+                FileLogger.getExceptionLogger().log(e);
             }
             return;
         }
@@ -222,7 +247,6 @@ public class WebSocketServer extends BaseServer {
             start.set(false);
             if(mOutputStreamRunnable != null){
                 mOutputStreamRunnable.close();
-                mMediaSource.removeMediaOutputStreamRunnable(mOutputStreamRunnable);
             }
         }
     }
@@ -238,7 +262,7 @@ public class WebSocketServer extends BaseServer {
         if(ver>0){
             if(source instanceof RtspSource){
                 return MediaConfig.createConfig(((RtspSource)source).getSdp(),source.hasAudio());
-            }else if(source instanceof MediaSourceFile){
+            }else if(source instanceof MediaSourceFileService){
                 return new MediaConfigBuilder()
                         .setVCodec(Media.MediaCodec.CODEC_H265)
                         .build();
@@ -254,29 +278,107 @@ public class WebSocketServer extends BaseServer {
     }
 
     public void sendMessage(String text)throws IOException{
-        mSession.sendMessage(new TextMessage(text));
+        mSession.sendMessage(text);
     }
 
     @Override
     public void sendMessage(int b) throws IOException {
+        mSession.sendMessage(b);
     }
 
     @Override
     public void sendMessage(byte[] b) throws IOException {
-        mSession.sendMessage(new BinaryMessage(b));
+        mSession.sendMessage(b);
     }
 
     @Override
     public void sendMessage(byte[] b, int off, int len) throws IOException {
-        mSession.sendMessage(new BinaryMessage(ByteBuffer.wrap(b,off,len)));
+        mSession.sendMessage(b, off, len);
     }
 
     public final static String formatWebsocketMediaSessionId(String id){
-        return String.format("session_websocket_%s_%s",id, UUID.randomUUID().toString());
+        return "session_websocket_"+id+UUID.randomUUID().toString();
     }
 
     public MediaOutputInfo createMediaOutputSession(String url){
-        return new MediaOutputInfo(formatWebsocketMediaSessionId(mSession.getId()), url, url);
+        return new MediaOutputInfo(formatWebsocketMediaSessionId(mSessionId), url, url);
+    }
+
+    public static String parseRequest(String request, NetParamsMap params) throws IOException {
+        BufferedReader sr = new BufferedReader(new StringReader(request));
+        String str = "";
+        String fun="";
+        while (!TextUtils.isEmpty(str=sr.readLine())){
+            if(str.startsWith("WSP")){
+                fun = str.trim();
+                continue;
+            }
+            if(str.contains(":")){
+                String[] map = str.split(":");
+                if(map.length>1){
+                    params.put(map[0].trim(),map[1].trim());
+                }
+            }
+        }
+        return fun;
+    }
+
+    public int responseRequest(int code,String message)throws IOException{
+        return responseRequest(mSession, code, message,null);
+    }
+
+    public int responseRequest(int code,String message,String content)throws IOException{
+        return responseRequest(mSession, code, message,content);
+    }
+
+    public static int responseRequest(MediaSession session,int code,String message,String content)throws IOException{
+        StringBuffer sb = new StringBuffer();
+        String responseHead = "WSP/1.1 "+ code + " "+ code(code) + end;
+        sb.append(responseHead)
+                .append(message)
+                .append(end);
+        if(!TextUtils.isEmpty(content)){
+            sb.append(content);
+        }
+        session.sendMessage(sb.toString());
+        return code;
+    }
+
+    public static int responseRequest(WebSocketSession session,int code,String message,String content)throws IOException{
+        StringBuffer sb = new StringBuffer();
+        String responseHead = "WSP/1.1 "+ code + " "+ code(code) + end;
+        sb.append(responseHead)
+                .append(message)
+                .append(end);
+        if(!TextUtils.isEmpty(content)){
+            sb.append(content);
+        }
+        session.sendMessage(new TextMessage(sb.toString()));
+        return code;
+    }
+
+    public static String code(int code){
+        switch (code){
+            case 200:
+                return "OK";
+            case 400:
+                return "400 means error";
+            default:
+                return "Error";
+        }
+    }
+
+    public String getChannel(){
+        return mSession.getSessionId();
+    }
+
+    protected void onHandleRequestINIT(String request,NetParamsMap params) throws IOException {
+        StringBuffer sb = new StringBuffer();
+        sb.append(SystemUtils.map2NetParams(new MapValueBuilder()
+                .put("CSeq", params.get("CSeq"))
+                .put("channel",getChannel())
+                .build()));
+        responseRequest(200, sb.toString());
     }
 
     private static class ControlMessage{
@@ -293,14 +395,25 @@ public class WebSocketServer extends BaseServer {
     private static class PlayMessage{
         public String url;
         public double ver;
-        public String mediaType;
+        public int mediaType;
+        public int decodeType;
+        public boolean isFile;
+
+        public void setFile(boolean file) {
+            isFile = file;
+        }
+
+        public boolean isFile() {
+            return isFile;
+        }
 
         @Override
         public String toString() {
             return "PlayMessage{" +
                     "url='" + url + '\'' +
                     ", ver=" + ver +
-                    ", mediaType='" + mediaType + '\'' +
+                    ", mediaType=" + mediaType +
+                    ", decodeType=" + decodeType +
                     '}';
         }
     }

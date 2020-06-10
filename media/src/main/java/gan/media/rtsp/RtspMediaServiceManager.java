@@ -24,30 +24,30 @@ import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class RtspMediaServerManager implements BaseListener,SocketListener,MediaSourceAdapter{
+public class RtspMediaServiceManager implements BaseListener,SocketListener,MediaSourceAdapter{
 
     static {
-        sInstance = new RtspMediaServerManager();
+        sInstance = new RtspMediaServiceManager();
     }
 
-    private static RtspMediaServerManager sInstance;
+    private static RtspMediaServiceManager sInstance;
 
-    public static RtspMediaServerManager getInstance() {
+    public static RtspMediaServiceManager getInstance() {
         return sInstance;
     }
 
     private SocketGroupManager mSocketGroupManager;
-    private ConcurrentHashMap<MediaSession, RtspMediaServer> mMediaSessionServerMap;
+    private ConcurrentHashMap<MediaSession, RtspMediaService> mMediaSessionServerMap;
     private ConcurrentHashMap<Object,MediaSession<?>> mSessions;
     private AtomicInteger  mSessionCount = new AtomicInteger(0);
     private HashMap<String, RtspSource> mMapRtspSource;
     private Object sourceLock = new Object();
     private AtomicInteger  mSourceCount = new AtomicInteger(0);
-    MediaServerManager mMediaServerManager = MediaServerManager.getInstance();
+    MediaServiceManager mMediaServerManager = MediaServiceManager.getInstance();
     private static PluginHelper<MediaListener> pluginHelper = new SyncPluginHelper<MediaListener>();
     private static FileLogger mLogger = FileLogger.getInstance("/rtsp/info");
 
-    private RtspMediaServerManager(){
+    private RtspMediaServiceManager(){
         mMediaServerManager.addMediaSourceAdapter(this);
         final MediaConfig config = MediaApplication.getMediaConfig();
         try {
@@ -100,11 +100,11 @@ public class RtspMediaServerManager implements BaseListener,SocketListener,Media
         removeSession(socket);
     }
 
-    public RtspMediaServer addSession(MediaSession session){
+    public RtspMediaService addSession(MediaSession session){
         if(session == null){
             throw new IllegalArgumentException("session error");
         }
-        RtspMediaServer server = SystemServer.startServer(RtspMediaServer.class,session);
+        RtspMediaService server = SystemServer.startServer(RtspMediaService.class,session);
         MediaConfig config = MediaApplication.getMediaConfig();
         if(mMediaSessionServerMap.size()>=config.rtspMaxConnection){
             SystemServer.executeThread(new Runnable() {
@@ -132,7 +132,7 @@ public class RtspMediaServerManager implements BaseListener,SocketListener,Media
             throw new IllegalArgumentException("session error");
         }
         if(session instanceof  MediaSession){
-            RtspMediaServer server = mMediaSessionServerMap.remove(session);
+            RtspMediaService server = mMediaSessionServerMap.remove(session);
             if(server!=null){
                 server.finish();
                 mSessions.remove(((MediaSession)session).getSession());
@@ -141,7 +141,7 @@ public class RtspMediaServerManager implements BaseListener,SocketListener,Media
         }else{
             MediaSession mediaSession = mSessions.remove(session);
             if(mediaSession!=null){
-                RtspMediaServer server = mMediaSessionServerMap.remove(mediaSession);
+                RtspMediaService server = mMediaSessionServerMap.remove(mediaSession);
                 if(server!=null){
                     server.finish();
                     mSessionCount.getAndDecrement();
@@ -228,7 +228,7 @@ public class RtspMediaServerManager implements BaseListener,SocketListener,Media
                 mLogger.log("ifWait token:%s",token);
                 logger.log("ifWait token:%s",token);
                 mMapKeyLock.ifWait(token);
-                RtspSource source = RtspMediaServerManager.getInstance().getRtspSource(token);
+                RtspSource source = RtspMediaServiceManager.getInstance().getRtspSource(token);
                 if(source!=null){
                     return MediaSourceResult.ok(source);
                 }
@@ -244,7 +244,7 @@ public class RtspMediaServerManager implements BaseListener,SocketListener,Media
                     if(response.status==200) {
                         if (rtspClient.sendRequestSetup2()) {
                             if(rtspClient.sendRequestPlay()){
-                                RtspMediaServer server = addSession(new RtspConnectionMediaSession(rtspClient));
+                                RtspMediaService server = addSession(new RtspConnectionMediaSession(rtspClient));
                                 if(server!=null){
                                     server.setHasAudio(request.hasAudio);
                                     server.setOutputEmptyAutoFinish(true);

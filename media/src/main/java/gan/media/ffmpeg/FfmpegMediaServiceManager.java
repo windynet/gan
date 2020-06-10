@@ -9,23 +9,23 @@ import gan.media.*;
 import java.net.URI;
 import java.net.URLEncoder;
 
-public class FfmpegMediaServerManager implements BaseListener, MediaSourceAdapter {
+public class FfmpegMediaServiceManager implements BaseListener, MediaSourceAdapter {
 
-    private static FfmpegMediaServerManager instance;
+    private static FfmpegMediaServiceManager instance;
 
     static {
-        instance = new FfmpegMediaServerManager();
+        instance = new FfmpegMediaServiceManager();
     }
 
     private Object sourceLock = new Object();
     private static FileLogger mLogger = FileLogger.getInstance("/ffmpeg/info");
 
-    public static FfmpegMediaServerManager getInstance() {
+    public static FfmpegMediaServiceManager getInstance() {
         return instance;
     }
 
-    private FfmpegMediaServerManager(){
-        MediaServerManager.getInstance().addMediaSourceAdapter(this);
+    private FfmpegMediaServiceManager(){
+        MediaServiceManager.getInstance().addMediaSourceAdapter(this);
     }
 
     @Override
@@ -40,7 +40,7 @@ public class FfmpegMediaServerManager implements BaseListener, MediaSourceAdapte
     @Override
     public MediaSource getMediaSource(MediaRequest request) {
         synchronized (sourceLock){
-            MediaSource source = MediaServerManager.getInstance().getMediaSource(request);
+            MediaSource source = MediaServiceManager.getInstance().getMediaSource(request);
             if(source!=null){
                 return source;
             }

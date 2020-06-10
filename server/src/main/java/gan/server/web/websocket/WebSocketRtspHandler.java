@@ -23,34 +23,34 @@ public class WebSocketRtspHandler extends AbstractWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        WebSocketServerManager.getLogger().log("onOpen:%s",session.getId());
+        WebSocketServiceManager.getLogger().log("onOpen:%s",session.getId());
         WebSocketHandler handler = findWebSocketHandler(session);
         if(handler!=null){
             handler.afterConnectionEstablished(session);
         }else{
-            WebSocketServerManager.getsInstance().onOpen(session);
+            WebSocketServiceManager.getsInstance().onOpen(session);
         }
     }
 
     @Override
     public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
-        WebSocketServerManager.getLogger().log("onError:"+session.getId());
+        WebSocketServiceManager.getLogger().log("onError:"+session.getId());
         WebSocketHandler handler = findWebSocketHandler(session);
         if(handler!=null){
             handler.handleTransportError(session,exception);
         }else {
-            WebSocketServerManager.getsInstance().onError(session, exception);
+            WebSocketServiceManager.getsInstance().onError(session, exception);
         }
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus closeStatus) throws Exception {
-        WebSocketServerManager.getLogger().log("onClose:"+session.getId());
+        WebSocketServiceManager.getLogger().log("onClose:"+session.getId());
         WebSocketHandler handler = findWebSocketHandler(session);
         if(handler!=null){
             handler.afterConnectionClosed(session,closeStatus);
         }else{
-            WebSocketServerManager.getsInstance().onClose(session);
+            WebSocketServiceManager.getsInstance().onClose(session);
         }
     }
 
@@ -62,7 +62,7 @@ public class WebSocketRtspHandler extends AbstractWebSocketHandler {
         if(handler!=null){
             handler.handleMessage(session,message);
         }else{
-            WebSocketServerManager.getsInstance().onTextMessage(new String(message.asBytes(),"UTF-8"),session);
+            WebSocketServiceManager.getsInstance().onTextMessage(new String(message.asBytes(),"UTF-8"),session);
         }
     }
 
@@ -74,7 +74,7 @@ public class WebSocketRtspHandler extends AbstractWebSocketHandler {
         if(handler!=null){
             handler.handleMessage(session,message);
         }else{
-            WebSocketServerManager.getsInstance().onBinaryMessage(message,session);
+            WebSocketServiceManager.getsInstance().onBinaryMessage(message,session);
         }
     }
 

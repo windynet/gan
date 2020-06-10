@@ -9,22 +9,22 @@ import org.springframework.web.socket.WebSocketSession;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class WebSocketServerManager {
+public class WebSocketServiceManager {
 
-    private final static String Tag = WebSocketServerManager.class.getName();
+    private final static String Tag = WebSocketServiceManager.class.getName();
 
     static {
-        sInstance = new WebSocketServerManager();
+        sInstance = new WebSocketServiceManager();
     }
-    private static WebSocketServerManager sInstance;
+    private static WebSocketServiceManager sInstance;
     private static FileLogger mLogger = FileLogger.getInstance("/websocket/info");
-    private ConcurrentHashMap<WebSocketSession,WebSocketServer> mMapSesstions = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<WebSocketSession,WebSocketService> mMapSesstions = new ConcurrentHashMap<>();
 
-    public static WebSocketServerManager getsInstance() {
+    public static WebSocketServiceManager getsInstance() {
         return sInstance;
     }
 
-    private WebSocketServerManager(){
+    private WebSocketServiceManager(){
     }
 
     public static FileLogger getLogger(){
@@ -37,7 +37,7 @@ public class WebSocketServerManager {
      */
     protected void onOpen(WebSocketSession session){
         mLogger.log("onOpen WebSocketSession id:%s",session.getId());
-        WebSocketServer server = SystemServer.startServer(WebSocketServer.class,session);
+        WebSocketService server = SystemServer.startServer(WebSocketService.class,session);
         mMapSesstions.put(session,server);
     }
 
@@ -57,7 +57,7 @@ public class WebSocketServerManager {
     protected void onTextMessage(String message, WebSocketSession session) {
         DebugLog.debug("onTextMessage message:"+message);
         try {
-            WebSocketServer server = mMapSesstions.get(session);
+            WebSocketService server = mMapSesstions.get(session);
             if(server!=null){
                 server.onMessage(message);
             }
@@ -83,7 +83,7 @@ public class WebSocketServerManager {
     }
 
     public void destoryServer(WebSocketSession session){
-        WebSocketServer server = mMapSesstions.remove(session);
+        WebSocketService server = mMapSesstions.remove(session);
         if(server!=null){
             server.finish();
         }

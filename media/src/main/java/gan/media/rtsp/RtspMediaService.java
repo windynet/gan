@@ -2,7 +2,7 @@ package gan.media.rtsp;
 
 import android.os.Handler;
 import gan.core.system.SystemUtils;
-import gan.core.system.server.ServerListener;
+import gan.core.system.server.ServiceListener;
 import gan.core.system.server.SystemServer;
 import gan.core.utils.TextUtils;
 import gan.log.DebugLog;
@@ -20,7 +20,7 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.*;
 
-public class RtspMediaServer extends MediaServer implements RtspSource{
+public class RtspMediaService extends MediaService implements RtspSource{
 
     final static String end = "\r\n";
     final static String charsetName = "UTF-8";
@@ -248,7 +248,7 @@ public class RtspMediaServer extends MediaServer implements RtspSource{
             return;
         }
 
-        if(RtspMediaServerManager.getInstance().containsRtspSource(mRtspUrl)){
+        if(RtspMediaServiceManager.getInstance().containsRtspSource(mRtspUrl)){
             responseRequest(RtspResponseCode.Error_Not_Acceptable,mRtspUrl+":push stream has in server");
             finish();
             return;
@@ -331,14 +331,14 @@ public class RtspMediaServer extends MediaServer implements RtspSource{
         MediaSource mediaSource;
         try{
             mediaRequest.setAutoPull(false);
-            mediaSource = MediaServerManager.getInstance().findMediaSource(mediaRequest);
+            mediaSource = MediaServiceManager.getInstance().findMediaSource(mediaRequest);
             if(mediaSource==null){
                 if(MediaUtils.isLocalURL(mName)){
                     mLogger.log("isLocalURL:%s", mName);
                 }else{
                     mediaRequest.setUrl(mName);
                     mediaRequest.setAutoPull(true);
-                    mediaSource = MediaServerManager.getInstance().findMediaSource(mediaRequest);
+                    mediaSource = MediaServiceManager.getInstance().findMediaSource(mediaRequest);
                 }
                 if(mediaSource==null){
                     DebugLog.info("找不到数据源");
@@ -399,7 +399,7 @@ public class RtspMediaServer extends MediaServer implements RtspSource{
     }
 
     public void startInputStream(String rtsp,String sdp,InputStream is) throws IOException{
-        if(RtspMediaServerManager.getInstance().getRtspSource(rtsp)!=null){
+        if(RtspMediaServiceManager.getInstance().getRtspSource(rtsp)!=null){
             responseRequest(RtspResponseCode.Error_Not_Acceptable,"has rtsp:"+rtsp);
             finish();
             return;
@@ -475,7 +475,7 @@ public class RtspMediaServer extends MediaServer implements RtspSource{
         MediaSourceInfo mediaSession = createMediaSourceSession();
         mMediaSource = mediaSession;
         try {
-            RtspMediaServerManager.getInstance().managerRtspSource(mRtspUrl,this);
+            RtspMediaServiceManager.getInstance().managerRtspSource(mRtspUrl,this);
         } catch (Exception e) {
             e.printStackTrace();
             DebugLog.warn(e.getMessage());
@@ -485,7 +485,7 @@ public class RtspMediaServer extends MediaServer implements RtspSource{
         mLogger.log("startInputStream sdp:%s\r\n", sdp);
         sessionTimeOut(mStartTimeOut);//等待数据一分钟超时
         mInputStreaming = true;
-        for(MediaSesstionObserver observer:RtspMediaServerManager.getManagers(MediaSesstionObserver.class)){
+        for(MediaSesstionObserver observer:RtspMediaServiceManager.getManagers(MediaSesstionObserver.class)){
             observer.onSourceSessionCreate(mediaSession);
         }
     }
@@ -560,11 +560,11 @@ public class RtspMediaServer extends MediaServer implements RtspSource{
             onStreamStop();
         }finally {
             if(mMediaSource!=null){
-                for(MediaSesstionObserver observer:RtspMediaServerManager.getManagers(MediaSesstionObserver.class)){
+                for(MediaSesstionObserver observer:RtspMediaServiceManager.getManagers(MediaSesstionObserver.class)){
                     observer.onSourceSessionDestory(mMediaSource);
                 }
                 if(!TextUtils.isEmpty(mRtspUrl)){
-                    RtspMediaServerManager.getInstance().removeRtspSource(mRtspUrl);
+                    RtspMediaServiceManager.getInstance().removeRtspSource(mRtspUrl);
                 }
             }
         }
@@ -582,7 +582,7 @@ public class RtspMediaServer extends MediaServer implements RtspSource{
     protected void startOutputStream(OutputStream outputStream)throws IOException{
         rtspSessionEnd();
         DebugLog.info(mRtspUrl+":"+"startOutputStream");
-        MediaSource mediaSource = MediaServerManager.getInstance().getMediaSource(mRtspUrl);
+        MediaSource mediaSource = MediaServiceManager.getInstance().getMediaSource(mRtspUrl);
         if(mediaSource == null){
             finish();
             return;
@@ -681,7 +681,7 @@ public class RtspMediaServer extends MediaServer implements RtspSource{
             if(mMediaSource != null){
                 MediaOutputInfo outputInfo = (MediaOutputInfo) runnable.getMediaInfo();
                 mMediaSource.addMediaOutputInfo(outputInfo);
-                for(MediaSesstionObserver observer:RtspMediaServerManager.getManagers(MediaSesstionObserver.class)){
+                for(MediaSesstionObserver observer:RtspMediaServiceManager.getManagers(MediaSesstionObserver.class)){
                     observer.onOutputSessionCreate(mMediaSource,outputInfo);
                 }
             }
@@ -701,7 +701,7 @@ public class RtspMediaServer extends MediaServer implements RtspSource{
                 if(mMediaSource != null){
                     MediaOutputInfo outputInfo = (MediaOutputInfo) runnable.getMediaInfo();
                     mMediaSource.removeMediaOutputInfo(outputInfo);
-                    for(MediaSesstionObserver observer:RtspMediaServerManager.getManagers(MediaSesstionObserver.class)){
+                    for(MediaSesstionObserver observer:RtspMediaServiceManager.getManagers(MediaSesstionObserver.class)){
                         observer.onOutputSessionDestory(mMediaSource, outputInfo);
                     }
                 }
@@ -748,7 +748,7 @@ public class RtspMediaServer extends MediaServer implements RtspSource{
         }
     }
 
-    public RtspMediaServer setOutputEmptyAutoFinish(boolean outputEmptyAutoFinish) {
+    public RtspMediaService setOutputEmptyAutoFinish(boolean outputEmptyAutoFinish) {
         this.mOutputEmptyAutoFinish = outputEmptyAutoFinish;
         return this;
     }
@@ -925,7 +925,7 @@ public class RtspMediaServer extends MediaServer implements RtspSource{
     }
 
     private String generateSession(){
-        return System.currentTimeMillis()+"_"+RtspMediaServerManager.getInstance().sourceCount();
+        return System.currentTimeMillis()+"_"+RtspMediaServiceManager.getInstance().sourceCount();
     }
 
     public int responseRequest(int code,String message)throws IOException{
@@ -991,7 +991,7 @@ public class RtspMediaServer extends MediaServer implements RtspSource{
         return null;
     }
 
-    public RtspMediaServer setRtpTimeOut(int rtpTimeOut) {
+    public RtspMediaService setRtpTimeOut(int rtpTimeOut) {
         this.mRtpTimeOut = rtpTimeOut;
         return this;
     }
@@ -1024,15 +1024,15 @@ public class RtspMediaServer extends MediaServer implements RtspSource{
         mFlags = flag;
     }
 
-    public static interface OnFrameCallBackPlugin extends ServerListener{
+    public static interface OnFrameCallBackPlugin extends ServiceListener {
         public void onFrame(byte channel,ByteBuffer frame, BufferInfo bufferInfo);
     }
 
-    public static interface OnMediaOutputStreamRunnableChangedPlugin extends  ServerListener{
+    public static interface OnMediaOutputStreamRunnableChangedPlugin extends ServiceListener {
         public void onMediaOutputStreamRunnableChanged(int newAllCount,String packetType,int packetTypeRunnableCount);
     }
 
-    public static interface OnStreamStateListenerPlugin extends ServerListener{
+    public static interface OnStreamStateListenerPlugin extends ServiceListener {
         public void onStreamStarted();
         public void onStreamStop();
     }

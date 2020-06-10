@@ -5,7 +5,7 @@ import gan.decoder.config.DecoderConfig;
 import gan.log.FileLogger;
 import gan.core.utils.TextUtils;
 import gan.media.MediaApplication;
-import gan.media.rtsp.RtspMediaServerManager;
+import gan.media.rtsp.RtspMediaServiceManager;
 import gan.core.system.server.SystemServer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
@@ -36,7 +36,7 @@ public class DecoderApplication extends MediaApplication {
     protected void onCreate(ApplicationContext context) {
         super.onCreate(context);
         FileLogger.getInfoLogger().setLogcat(isDebug());
-        RtspMediaServerManager.getInstance().initServer();
+        RtspMediaServiceManager.getInstance().initServer();
     }
 
     public static DecoderConfig getDecoderConfig() {

@@ -6,9 +6,9 @@ import gan.core.system.server.SystemServer;
 import gan.log.DebugLog;
 import gan.log.FileLogger;
 import gan.media.MediaApplication;
-import gan.media.ffmpeg.FfmpegMediaServerManager;
-import gan.media.file.FileMediaServerManager;
-import gan.media.rtsp.RtspMediaServerManager;
+import gan.media.ffmpeg.FfmpegMediaServiceManager;
+import gan.media.file.FileMediaServiceManager;
+import gan.media.rtsp.RtspMediaServiceManager;
 import gan.server.config.FFmepg;
 import gan.server.config.Gan;
 import gan.web.config.MediaConfig;
@@ -60,8 +60,8 @@ public class GanServer extends MediaApplication {
         MediaConfig config = getMediaConfig();
         if(config.rtspEnable){
             DebugLog.info( "rtsp_port:"+config.rtspPort);
-            addManager(RtspMediaServerManager.getInstance());
-            RtspMediaServerManager.getInstance().initServer();
+            addManager(RtspMediaServiceManager.getInstance());
+            RtspMediaServiceManager.getInstance().initServer();
         }
 
         if(gan.gb28181Enable){
@@ -71,15 +71,15 @@ public class GanServer extends MediaApplication {
         }
 
         try {
-            this.getClass().getClassLoader().loadClass(FfmpegMediaServerManager.class.getName());
-            addManager(FfmpegMediaServerManager.getInstance());
+            this.getClass().getClassLoader().loadClass(FfmpegMediaServiceManager.class.getName());
+            addManager(FfmpegMediaServiceManager.getInstance());
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
 
         try {
-            this.getClass().getClassLoader().loadClass(FileMediaServerManager.class.getName());
-            addManager(FileMediaServerManager.getInstance());
+            this.getClass().getClassLoader().loadClass(FileMediaServiceManager.class.getName());
+            addManager(FileMediaServiceManager.getInstance());
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }

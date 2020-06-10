@@ -1,4 +1,4 @@
 package gan.core.system.server;
 
-public interface ServerListener {
+public interface ServiceListener {
 }

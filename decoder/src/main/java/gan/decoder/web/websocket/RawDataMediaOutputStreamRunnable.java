@@ -4,7 +4,7 @@ import gan.log.FileLogger;
 import gan.media.MediaInfo;
 import gan.media.MediaOutputInfo;
 import gan.media.MediaOutputStreamRunnable;
-import gan.media.rtsp.RtspMediaServerManager;
+import gan.media.rtsp.RtspMediaServiceManager;
 import gan.core.system.SystemUtils;
 
 import java.io.FileOutputStream;
@@ -19,7 +19,7 @@ public class RawDataMediaOutputStreamRunnable implements MediaOutputStreamRunnab
     public RawDataMediaOutputStreamRunnable(MediaOutputInfo mediaOutputInfo, MediaSessionWebSocket sessionWebSocket){
         mMediaSessionWebSocket = sessionWebSocket;
         mMediaOutputInfo = mediaOutputInfo;
-        mLogger = RtspMediaServerManager.getLogger(mediaOutputInfo.url);
+        mLogger = RtspMediaServiceManager.getLogger(mediaOutputInfo.url);
     }
 
     @Override

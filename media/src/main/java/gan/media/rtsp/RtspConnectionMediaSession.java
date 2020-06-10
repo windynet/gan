@@ -33,7 +33,7 @@ public class RtspConnectionMediaSession implements MediaSession<RtspClient> {
 
     @Override
     public void sendMessage(String message) throws IOException {
-        mRtspConnection.send(message.getBytes(RtspMediaServer.charsetName));
+        mRtspConnection.send(message.getBytes(RtspMediaService.charsetName));
     }
 
     @Override

@@ -10,7 +10,7 @@ import gan.media.ffmpeg.Ffmpeg;
 import gan.media.ffmpeg.FrameCallBack;
 import gan.media.h26x.HUtils;
 import gan.media.rtsp.RtspFrame2RtpPlugin;
-import gan.media.rtsp.RtspMediaServer;
+import gan.media.rtsp.RtspMediaService;
 import gan.media.rtsp.Sdp;
 
 import java.io.FileOutputStream;
@@ -20,7 +20,7 @@ public class FilePullMediaService implements Runnable, FrameCallBack {
 
     String mUrl;
     Ffmpeg ffmpeg;
-    RtspMediaServer mRtspMediaServer;
+    RtspMediaService mRtspMediaServer;
     PacketInfo mVideoDataPacketInfo;
     PacketInfo mTempPacketInfo;
     volatile boolean runing;
@@ -44,7 +44,7 @@ public class FilePullMediaService implements Runnable, FrameCallBack {
         if(FileHelper.isFileExists(url)){
             mUrl = url;
         }else{
-            mUrl = FileMediaServerManager.findFilePath(url);
+            mUrl = FileMediaServiceManager.findFilePath(url);
         }
 
         result = MediaSourceResult.error("not find");
@@ -54,7 +54,7 @@ public class FilePullMediaService implements Runnable, FrameCallBack {
             return result;
         }
 
-        mLogger = FileMediaServerManager.getLogger(url);
+        mLogger = FileMediaServiceManager.getLogger(url);
         SystemServer.executeThread(this);
 
         synchronized (this){
@@ -66,12 +66,12 @@ public class FilePullMediaService implements Runnable, FrameCallBack {
         }
 
         if(result.ok){
-            mRtspMediaServer = SystemServer.startServer(RtspMediaServer.class, new MediaSessionString(url));
+            mRtspMediaServer = SystemServer.startServer(RtspMediaService.class, new MediaSessionString(url));
             mRtspMediaServer.registerPlugin(new RtspFrame2RtpPlugin());
             mRtspMediaServer.setOutputEmptyAutoFinish(true);
             mRtspMediaServer.addFlag(Media.FLAG_FILE_SOURCE);
             mRtspMediaServer.startInputStream(url, Sdp.SDP);
-            mRtspMediaServer.registerPlugin(new ServerPlugin<RtspMediaServer>(){
+            mRtspMediaServer.registerPlugin(new ServerPlugin<RtspMediaService>(){
                 @Override
                 protected void onDestory() {
                     super.onDestory();

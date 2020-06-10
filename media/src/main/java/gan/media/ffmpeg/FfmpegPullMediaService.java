@@ -10,7 +10,7 @@ import gan.media.MediaSource;
 import gan.media.PacketInfo;
 import gan.media.h26x.HUtils;
 import gan.media.rtsp.Rtsp2Fmp4ServerPlugin;
-import gan.media.rtsp.RtspMediaServer;
+import gan.media.rtsp.RtspMediaService;
 import gan.media.rtsp.Sdp;
 
 import java.io.FileOutputStream;
@@ -22,7 +22,7 @@ public class FfmpegPullMediaService implements Runnable, FrameCallBack {
 
     String mUrl;
     Ffmpeg ffmpeg;
-    RtspMediaServer mRtspMediaServer;
+    RtspMediaService mRtspMediaServer;
     PacketInfo mVideoDataPacketInfo;
     PacketInfo mTempPacketInfo;
     volatile boolean runing;
@@ -42,13 +42,13 @@ public class FfmpegPullMediaService implements Runnable, FrameCallBack {
             return null;
         }
         mUrl = url;
-        mLogger = FfmpegMediaServerManager.getLogger(url);
-        mRtspMediaServer = SystemServer.startServer(RtspMediaServer.class, new MediaSessionString(url));
+        mLogger = FfmpegMediaServiceManager.getLogger(url);
+        mRtspMediaServer = SystemServer.startServer(RtspMediaService.class, new MediaSessionString(url));
         mRtspMediaServer.setHasAudio(false);
         mRtspMediaServer.registerPlugin(new Rtsp2Fmp4ServerPlugin());
         mRtspMediaServer.setOutputEmptyAutoFinish(true);
         mRtspMediaServer.startInputStream(url, Sdp.SDP_OnlyVideo);
-        mRtspMediaServer.registerPlugin(new ServerPlugin<RtspMediaServer>(){
+        mRtspMediaServer.registerPlugin(new ServerPlugin<RtspMediaService>(){
             @Override
             protected void onDestory() {
                 super.onDestory();

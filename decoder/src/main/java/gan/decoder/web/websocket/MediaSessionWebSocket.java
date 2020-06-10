@@ -1,7 +1,7 @@
 package gan.decoder.web.websocket;
 
 import gan.core.system.SystemUtils;
-import gan.core.system.server.ServerSession;
+import gan.core.system.server.ServiceSession;
 import org.springframework.web.socket.BinaryMessage;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -9,7 +9,7 @@ import org.springframework.web.socket.WebSocketSession;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
-public class MediaSessionWebSocket implements ServerSession<WebSocketSession> {
+public class MediaSessionWebSocket implements ServiceSession<WebSocketSession> {
 
     WebSocketSession mWebSocketSession;
     FileOutputStream fos;

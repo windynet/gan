@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>gan</groupId>
     <artifactId>gan</artifactId>
-    <version>2.1.0_${maven.build.timestamp}</version>
+    <version>2.1.1_${maven.build.timestamp}</version>
     <name>gan</name>
     <description>gan server</description>
     <packaging>jar</packaging>
@@ -55,7 +55,7 @@
         <dependency>
             <groupId>gan</groupId>
             <artifactId>core</artifactId>
-            <version>1.1.6</version>
+            <version>1.2.0</version>
         </dependency>
 
         <dependency>

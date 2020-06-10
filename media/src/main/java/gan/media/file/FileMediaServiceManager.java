@@ -9,22 +9,22 @@ import gan.media.*;
 import java.net.URI;
 import java.net.URLEncoder;
 
-public class FileMediaServerManager implements MediaSourceAdapter {
+public class FileMediaServiceManager implements MediaSourceAdapter {
 
-    private static FileMediaServerManager instance;
+    private static FileMediaServiceManager instance;
 
     static {
-        instance = new FileMediaServerManager();
+        instance = new FileMediaServiceManager();
     }
 
     private static FileLogger mLogger = FileLogger.getInstance("/file/info");
 
-    public static FileMediaServerManager getInstance() {
+    public static FileMediaServiceManager getInstance() {
         return instance;
     }
 
-    private FileMediaServerManager(){
-        MediaServerManager.getInstance().addMediaSourceAdapter(this);
+    private FileMediaServiceManager(){
+        MediaServiceManager.getInstance().addMediaSourceAdapter(this);
     }
 
     public static String findFilePath(String path){

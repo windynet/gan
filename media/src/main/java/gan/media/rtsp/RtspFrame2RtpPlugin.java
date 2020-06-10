@@ -9,7 +9,7 @@ import gan.media.h26x.HUtils;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class RtspFrame2RtpPlugin extends ServerPlugin<RtspMediaServer> implements RtspMediaServer.OnFrameCallBackPlugin {
+public class RtspFrame2RtpPlugin extends ServerPlugin<RtspMediaService> implements RtspMediaService.OnFrameCallBackPlugin {
 
     final static String Tag = RtspFrame2RtpPlugin.class.getName();
     private static final AtomicInteger sAtomSsrc = new AtomicInteger(1000);
@@ -29,7 +29,7 @@ public class RtspFrame2RtpPlugin extends ServerPlugin<RtspMediaServer> implement
     ByteBuffer mPacket = ByteBuffer.allocate(PackSize);
 
     @Override
-    protected void onCreate(RtspMediaServer server) {
+    protected void onCreate(RtspMediaService server) {
         super.onCreate(server);
         DebugLog.info("onCreate");
         SSRCA = generateSsrc();

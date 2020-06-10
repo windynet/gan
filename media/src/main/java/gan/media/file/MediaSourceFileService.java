@@ -10,7 +10,7 @@ import gan.web.config.MediaConfig;
 import java.io.FileInputStream;
 import java.nio.ByteBuffer;
 
-public class MediaSourceFile extends MediaSourceAbstract implements Runnable{
+public class MediaSourceFileService extends MediaSourceAbstractService implements Runnable{
 
     String mUri;
 
@@ -52,7 +52,7 @@ public class MediaSourceFile extends MediaSourceAbstract implements Runnable{
     protected void onStartInput() {
         super.onStartInput();
         String uri = getUri();
-        MediaServerManager.getInstance().managerMediaSource(uri,this);
+        MediaServiceManager.getInstance().managerMediaSource(uri,this);
     }
 
     @Override
@@ -60,7 +60,7 @@ public class MediaSourceFile extends MediaSourceAbstract implements Runnable{
         try{
             super.stopInput();
         }finally {
-            MediaServerManager.getInstance().removeMediaSource(getUri());
+            MediaServiceManager.getInstance().removeMediaSource(getUri());
         }
     }
 

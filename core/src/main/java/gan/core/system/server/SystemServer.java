@@ -193,8 +193,8 @@ public class SystemServer {
 		sysPathsField.set(null, null);
 	}
 
-	public static <T extends BaseServer> T startServer(Class<T> cls, Object... paramster){
-		return ServerManager.getInstance().startServer(cls,paramster);
+	public static <T extends BaseService> T startServer(Class<T> cls, Object... paramster){
+		return ServiceManager.getInstance().startServer(cls,paramster);
 	}
 
 	public static boolean IsDebug(){

@@ -8,15 +8,15 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 
-public abstract class BaseServer extends Context{
+public abstract class BaseService extends Context{
 
     public final static int State_Destoryed = -2;
     public final static int State_Finishing = -1;
     public final static int State_Create = 1;
     public final static int State_Created = 2;
 
-    private PluginHelper<ServerListener> pluginHelper = new SyncPluginHelper<ServerListener>();
-    private HashMap<String,ServerMessageHandler> mMapMessageHandlers;
+    private PluginHelper<ServiceListener> pluginHelper = new SyncPluginHelper<ServiceListener>();
+    private HashMap<String,ServiceMessageHandler> mMapMessageHandlers;
     private Object[] parameters;
     private volatile int state=State_Create;
 
@@ -35,7 +35,7 @@ public abstract class BaseServer extends Context{
         state = State_Destoryed;
     }
 
-    public BaseServer(){
+    public BaseService(){
     }
 
     protected void onCreate(Object... parameter){
@@ -46,7 +46,7 @@ public abstract class BaseServer extends Context{
         if(mMapMessageHandlers!=null){
             mMapMessageHandlers.clear();
         }
-        for(ServerListener listener:pluginHelper.getManagers(ServerListener.class)){
+        for(ServiceListener listener:pluginHelper.getManagers(ServiceListener.class)){
             destoryPlugin(listener);
         }
     }
@@ -62,7 +62,7 @@ public abstract class BaseServer extends Context{
 
     public final void finish(){
         FileLogger.getDebugLogger().log(Thread.currentThread().getStackTrace());
-        ServerManager.destoryServer(this);
+        ServiceManager.destoryServer(this);
     }
 
     public String getType(){
@@ -75,7 +75,7 @@ public abstract class BaseServer extends Context{
 
     public abstract void sendMessage(byte[] b,int off,int len) throws IOException;
 
-    public final void registerPlugin(ServerListener listener) {
+    public final void registerPlugin(ServiceListener listener) {
         if(isFinishing()){
             return;
         }
@@ -83,31 +83,31 @@ public abstract class BaseServer extends Context{
             ((ServerPlugin)listener).onAttachServer(this);
         }
         pluginHelper.addManager(listener);
-        if(listener instanceof ServerMessageHandler){
-            registerMessageHandler((ServerMessageHandler)listener);
+        if(listener instanceof ServiceMessageHandler){
+            registerMessageHandler((ServiceMessageHandler)listener);
         }
     }
 
-    public final <T extends ServerListener> Collection<T> getPlugin(
+    public final <T extends ServiceListener> Collection<T> getPlugin(
             Class<T> cls) {
         return pluginHelper.getManagers(cls);
     }
 
-    public final void unregisterPlugin(ServerListener listener){
+    public final void unregisterPlugin(ServiceListener listener){
         pluginHelper.removeManager(listener);
-        if(listener instanceof ServerMessageHandler){
-            unregisterMessageHandler((ServerMessageHandler)listener);
+        if(listener instanceof ServiceMessageHandler){
+            unregisterMessageHandler((ServiceMessageHandler)listener);
         }
         if(listener instanceof ServerPlugin){
             ((ServerPlugin)listener).onDestory();
         }
     }
 
-    public PluginHelper<ServerListener> getPluginHelper(){
+    public PluginHelper<ServiceListener> getPluginHelper(){
         return pluginHelper;
     }
 
-    public final void registerMessageHandler(ServerMessageHandler messageHandler){
+    public final void registerMessageHandler(ServiceMessageHandler messageHandler){
         if(isFinishing()){
             return;
         }
@@ -123,11 +123,11 @@ public abstract class BaseServer extends Context{
         }
     }
 
-    public final void unregisterMessageHandler(ServerMessageHandler messageHandler){
+    public final void unregisterMessageHandler(ServiceMessageHandler messageHandler){
         unregisterMessageHandler(messageHandler.getType());
     }
 
-    public final void destoryPlugin(ServerListener listener){
+    public final void destoryPlugin(ServiceListener listener){
         unregisterPlugin(listener);
     }
 

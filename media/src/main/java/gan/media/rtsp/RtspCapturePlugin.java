@@ -9,7 +9,7 @@ import gan.core.system.server.SystemServer;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class RtspCapturePlugin extends ServerPlugin<RtspMediaServer> implements RtspMediaServer.OnFrameCallBackPlugin {
+public class RtspCapturePlugin extends ServerPlugin<RtspMediaService> implements RtspMediaService.OnFrameCallBackPlugin {
 
     MediaCaptureCallBack mediaCaptureCallBack;
 
@@ -29,7 +29,7 @@ public class RtspCapturePlugin extends ServerPlugin<RtspMediaServer> implements 
     }
 
     @Override
-    protected void onCreate(RtspMediaServer server) {
+    protected void onCreate(RtspMediaService server) {
         super.onCreate(server);
         SystemServer.getMainHandler().postDelayed(timeOut,3000);
         runing.set(true);

@@ -2,12 +2,12 @@ package gan.media.rtsp;
 
 import android.os.Handler;
 import gan.core.system.SystemUtils;
-import gan.core.system.server.BaseServer;
+import gan.core.system.server.BaseService;
 import gan.core.system.server.SystemServer;
 
 import java.io.IOException;
 
-public class RtspPullServer extends BaseServer implements Runnable{
+public class RtspPullService extends BaseService implements Runnable{
 
     RtspClient mRtspConnection;
     boolean mPlaying;
@@ -19,7 +19,7 @@ public class RtspPullServer extends BaseServer implements Runnable{
         SystemServer.executeThread(new Runnable() {
             @Override
             public void run() {
-                RtspMediaServer server=null;
+                RtspMediaService server=null;
                 try{
                     mRtspConnection.connect();
                     mRtspConnection.sendRequestOption();
@@ -28,11 +28,11 @@ public class RtspPullServer extends BaseServer implements Runnable{
                         if(mRtspConnection.sendRequestSetup2()){
                             if( mRtspConnection.sendRequestPlay()){
                                 mPlaying = true;
-                                SystemServer.getMainHandler().removeCallbacks(RtspPullServer.this);
-                                server = RtspMediaServerManager.getInstance().addSession(new RtspConnectionMediaSession(mRtspConnection));
+                                SystemServer.getMainHandler().removeCallbacks(RtspPullService.this);
+                                server = RtspMediaServiceManager.getInstance().addSession(new RtspConnectionMediaSession(mRtspConnection));
                                 if(server!=null){
                                     server.startInputStream(rtsp, response.content, mRtspConnection.mInputStream);
-                                    RtspMediaServerManager.getInstance().removeSession(server.getSession());
+                                    RtspMediaServiceManager.getInstance().removeSession(server.getSession());
                                 }
                             }else{
                                 SystemUtils.close(mRtspConnection);
@@ -51,8 +51,8 @@ public class RtspPullServer extends BaseServer implements Runnable{
                         server.finish();
                     }
                     Handler handler = SystemServer.getMainHandler();
-                    handler.removeCallbacks(RtspPullServer.this);
-                    handler.postDelayed(RtspPullServer.this,10000);
+                    handler.removeCallbacks(RtspPullService.this);
+                    handler.postDelayed(RtspPullService.this,10000);
                 }
             }
         });
@@ -63,7 +63,7 @@ public class RtspPullServer extends BaseServer implements Runnable{
         super.onDestory();
         SystemUtils.close(mRtspConnection);
         Handler handler = SystemServer.getMainHandler();
-        handler.removeCallbacks(RtspPullServer.this);
+        handler.removeCallbacks(RtspPullService.this);
     }
 
     @Override

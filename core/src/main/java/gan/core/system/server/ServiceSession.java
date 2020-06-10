@@ -3,7 +3,7 @@ package gan.core.system.server;
 import java.io.Closeable;
 import java.io.IOException;
 
-public interface ServerSession<T> extends Closeable {
+public interface ServiceSession<T> extends Closeable {
     public String getSessionId();
     public T getSession();
     public void sendMessage(String message) throws IOException;

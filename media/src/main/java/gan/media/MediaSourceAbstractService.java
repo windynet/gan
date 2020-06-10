@@ -1,8 +1,8 @@
 package gan.media;
 
 import gan.log.DebugLog;
-import gan.media.rtsp.RtspMediaServer;
-import gan.media.rtsp.RtspMediaServerManager;
+import gan.media.rtsp.RtspMediaService;
+import gan.media.rtsp.RtspMediaServiceManager;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -10,7 +10,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-public abstract class MediaSourceAbstract extends MediaServer implements MediaSource{
+public abstract class MediaSourceAbstractService extends MediaService implements MediaSource{
 
     String mName;
     MediaSourceInfo mMediaSource;
@@ -67,7 +67,7 @@ public abstract class MediaSourceAbstract extends MediaServer implements MediaSo
         MediaSourceInfo mediaSession = createMediaSourceSession();
         mMediaSource = mediaSession;
         onStartInput();
-        for(MediaSesstionObserver observer:RtspMediaServerManager.getManagers(MediaSesstionObserver.class)){
+        for(MediaSesstionObserver observer:RtspMediaServiceManager.getManagers(MediaSesstionObserver.class)){
             observer.onSourceSessionCreate(mediaSession);
         }
     }
@@ -78,7 +78,7 @@ public abstract class MediaSourceAbstract extends MediaServer implements MediaSo
     public void stopInput(){
         mIsInputing = false;
         if(mMediaSource!=null){
-            for(MediaSesstionObserver observer:RtspMediaServerManager.getManagers(MediaSesstionObserver.class)){
+            for(MediaSesstionObserver observer:RtspMediaServiceManager.getManagers(MediaSesstionObserver.class)){
                 observer.onSourceSessionDestory(mMediaSource);
             }
         }
@@ -102,7 +102,7 @@ public abstract class MediaSourceAbstract extends MediaServer implements MediaSo
             mOutputStreamRunnables.add(runnable);
             MediaOutputInfo outputInfo = (MediaOutputInfo) runnable.getMediaInfo();
             mMediaSource.addMediaOutputInfo(outputInfo);
-            for(MediaSesstionObserver observer:RtspMediaServerManager.getManagers(MediaSesstionObserver.class)){
+            for(MediaSesstionObserver observer:RtspMediaServiceManager.getManagers(MediaSesstionObserver.class)){
                 observer.onOutputSessionCreate(mMediaSource,outputInfo);
             }
             notifyMediaOutputStreamRunnableChanged(mOutputStreamRunnables.size(), runnable.getPacketType(),
@@ -118,7 +118,7 @@ public abstract class MediaSourceAbstract extends MediaServer implements MediaSo
             }
             MediaOutputInfo outputInfo = (MediaOutputInfo) runnable.getMediaInfo();
             mMediaSource.removeMediaOutputInfo(outputInfo);
-            for(MediaSesstionObserver observer:RtspMediaServerManager.getManagers(MediaSesstionObserver.class)){
+            for(MediaSesstionObserver observer:RtspMediaServiceManager.getManagers(MediaSesstionObserver.class)){
                 observer.onOutputSessionDestory(mMediaSource, outputInfo);
             }
             notifyMediaOutputStreamRunnableChanged(mOutputStreamRunnables.size(), runnable.getPacketType(),
@@ -196,7 +196,7 @@ public abstract class MediaSourceAbstract extends MediaServer implements MediaSo
 
     protected void notifyMediaOutputStreamRunnableChanged(int newAllCount, String packetType, int packetTypeRunnableCount){
         try{
-            for(RtspMediaServer.OnMediaOutputStreamRunnableChangedPlugin plugin: getPlugin(RtspMediaServer.OnMediaOutputStreamRunnableChangedPlugin.class)){
+            for(RtspMediaService.OnMediaOutputStreamRunnableChangedPlugin plugin: getPlugin(RtspMediaService.OnMediaOutputStreamRunnableChangedPlugin.class)){
                 plugin.onMediaOutputStreamRunnableChanged(newAllCount,packetType,packetTypeRunnableCount);
             }
         }finally {
@@ -209,7 +209,7 @@ public abstract class MediaSourceAbstract extends MediaServer implements MediaSo
         }
     }
 
-    public MediaSourceAbstract setOutputEmptyAutoFinish(boolean outputEmptyAutoFinish) {
+    public MediaSourceAbstractService setOutputEmptyAutoFinish(boolean outputEmptyAutoFinish) {
         this.mOutputEmptyAutoFinish = outputEmptyAutoFinish;
         return this;
     }

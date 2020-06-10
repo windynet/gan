@@ -4,21 +4,21 @@ import android.os.Handler;
 import gan.core.BaseListener;
 import gan.core.system.SystemUtils;
 
-public class ServerManager implements BaseListener {
+public class ServiceManager implements BaseListener {
 
-    private final static ServerManager sInstance;
+    private final static ServiceManager sInstance;
 
     static{
-        SystemServer.addManager(sInstance = new ServerManager());
+        SystemServer.addManager(sInstance = new ServiceManager());
     }
 
-    protected static ServerManager getInstance(){
+    protected static ServiceManager getInstance(){
         return sInstance;
     }
 
-    protected <T extends BaseServer> T startServer(Class<T> cls,Object... paramster){
+    protected <T extends BaseService> T startServer(Class<T> cls, Object... paramster){
         try {
-            BaseServer server = cls.newInstance();
+            BaseService server = cls.newInstance();
             server.create(paramster);
             return (T)server;
         } catch (Exception e) {
@@ -34,7 +34,7 @@ public class ServerManager implements BaseListener {
         }
     };
 
-    public static void destoryServer(BaseServer server){
+    public static void destoryServer(BaseService server){
         if(server == null){
             new IllegalArgumentException("server null");
         }

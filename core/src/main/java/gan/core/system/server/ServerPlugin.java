@@ -1,6 +1,6 @@
 package gan.core.system.server;
 
-public class ServerPlugin<T extends BaseServer> implements ServerListener {
+public class ServerPlugin<T extends BaseService> implements ServiceListener {
 
     protected T mServer;
 
