@@ -42,6 +42,11 @@ public abstract class MediaSourceAbstractService extends MediaService implements
         return null;
     }
 
+    @Override
+    public String getUri() {
+        return null;
+    }
+
     public void setName(String name) {
         this.mName = name;
     }
@@ -226,6 +231,21 @@ public abstract class MediaSourceAbstractService extends MediaService implements
 
     public int addFlag(int flags){
         return  mFlags |= flags;
+    }
+
+    @Override
+    public void play(float start, float end) {
+
+    }
+
+    @Override
+    public void scale(float scale) {
+
+    }
+
+    @Override
+    public void pause() {
+
     }
 
 }

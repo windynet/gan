@@ -1,14 +1,17 @@
 package gan.media.file;
 
+import android.os.Handler;
+import android.os.Looper;
 import gan.core.file.FileHelper;
 import gan.core.system.SystemUtils;
-import gan.core.system.server.ServerPlugin;
+import gan.core.system.server.ServicePlugin;
 import gan.core.system.server.SystemServer;
 import gan.log.FileLogger;
 import gan.media.*;
 import gan.media.ffmpeg.Ffmpeg;
 import gan.media.ffmpeg.FrameCallBack;
 import gan.media.h26x.HUtils;
+import gan.media.rtsp.RtspController;
 import gan.media.rtsp.RtspFrame2RtpPlugin;
 import gan.media.rtsp.RtspMediaService;
 import gan.media.rtsp.Sdp;
@@ -16,7 +19,7 @@ import gan.media.rtsp.Sdp;
 import java.io.FileOutputStream;
 import java.nio.ByteBuffer;
 
-public class FilePullMediaService implements Runnable, FrameCallBack {
+public class FilePullMediaService implements Runnable, FrameCallBack, RtspController {
 
     String mUrl;
     Ffmpeg ffmpeg;
@@ -24,7 +27,9 @@ public class FilePullMediaService implements Runnable, FrameCallBack {
     PacketInfo mVideoDataPacketInfo;
     PacketInfo mTempPacketInfo;
     volatile boolean runing;
+    volatile boolean isPaused;
     FileLogger mLogger;
+    Handler handler;
 
     public FilePullMediaService(){
         ffmpeg = new Ffmpeg();
@@ -69,9 +74,10 @@ public class FilePullMediaService implements Runnable, FrameCallBack {
             mRtspMediaServer = SystemServer.startServer(RtspMediaService.class, new MediaSessionString(url));
             mRtspMediaServer.registerPlugin(new RtspFrame2RtpPlugin());
             mRtspMediaServer.setOutputEmptyAutoFinish(true);
+            mRtspMediaServer.setRtspController(this);
             mRtspMediaServer.addFlag(Media.FLAG_FILE_SOURCE);
             mRtspMediaServer.startInputStream(url, Sdp.SDP);
-            mRtspMediaServer.registerPlugin(new ServerPlugin<RtspMediaService>(){
+            mRtspMediaServer.registerPlugin(new ServicePlugin<RtspMediaService>(){
                 @Override
                 protected void onDestory() {
                     super.onDestory();
@@ -101,6 +107,9 @@ public class FilePullMediaService implements Runnable, FrameCallBack {
     @Override
     public void run() {
         try{
+            Looper.prepare();
+            handler = new Handler(Looper.myLooper());
+            isPaused = false;
             runing = true;
             mLogger.log("ffmpeg create");
             long ret = ffmpeg.create();
@@ -115,7 +124,10 @@ public class FilePullMediaService implements Runnable, FrameCallBack {
                     result.asOk();
                     notifyResult();
                     while (runing){
-                        ffmpeg.parseFrame();
+                        Looper.loopMessage();
+                        if(!isPaused){
+                            ffmpeg.parseFrame();
+                        }
                         try {
                             Thread.sleep(1);
                         } catch (InterruptedException e) {
@@ -129,14 +141,19 @@ public class FilePullMediaService implements Runnable, FrameCallBack {
                 notifyResult();
             }
         }finally {
-            if(ffmpeg!=null){
-                ffmpeg.destroy();
-            }
             try{
-                destroy();
-                mLogger.log("ffmpeg exit");
+                if(ffmpeg!=null){
+                    ffmpeg.destroy();
+                }
+                try{
+                    destroy();
+                    mLogger.log("ffmpeg exit");
+                }finally {
+                    notifyResult();
+                }
             }finally {
-                notifyResult();
+                handler.removeCallbacksAndMessages(null);
+                Looper.myLooper().quitSafely();
             }
         }
     }
@@ -241,4 +258,30 @@ public class FilePullMediaService implements Runnable, FrameCallBack {
         return videoPts+=3600;
     }
 
+
+    @Override
+    public void play(float start, float end) {
+        if(runing){
+            isPaused =false;
+            handler.post(new Runnable() {
+                @Override
+                public void run() {
+                    ffmpeg.seek((long) Math.floor(start));
+                }
+            });
+        }
+    }
+
+    @Override
+    public void scale(float scale) {
+        if(runing){
+        }
+    }
+
+    @Override
+    public void pause() {
+        if(runing){
+            isPaused = true;
+        }
+    }
 }

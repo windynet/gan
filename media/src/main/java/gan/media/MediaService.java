@@ -1,8 +1,8 @@
 package gan.media;
 
-import gan.log.DebugLog;
 import gan.core.system.SystemUtils;
 import gan.core.system.server.BaseService;
+import gan.log.DebugLog;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -11,9 +11,7 @@ import java.util.HashMap;
 
 public class MediaService extends BaseService {
 
-    final static String Tag = MediaService.class.getName();
-
-    protected  MediaSession   mMediaSession;
+    protected  MediaSession mMediaSession;
     private Object mTag;
     private HashMap<String, Object> mTags;
 

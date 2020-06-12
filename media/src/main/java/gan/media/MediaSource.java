@@ -26,4 +26,11 @@ public interface MediaSource {
     public boolean capture(MediaCaptureCallBack captureCallBack);
 
     public boolean isFlag(int flag);
+
+    public void play(float start,float end);
+
+    public void scale(float scale);
+
+    public void pause();
+
 }

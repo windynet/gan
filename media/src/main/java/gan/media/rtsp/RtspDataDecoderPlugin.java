@@ -4,13 +4,13 @@ import gan.log.FileLogger;
 import gan.media.*;
 import gan.media.codec.NativeDecoder;
 import gan.media.codec.RawDataCallBack;
-import gan.core.system.server.ServerPlugin;
+import gan.core.system.server.ServicePlugin;
 import gan.core.system.server.SystemServer;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-public class RtspDataDecoderPlugin extends ServerPlugin<RtspMediaService> implements RtspMediaService.OnFrameCallBackPlugin, MediaOutputStream, RawDataCallBack {
+public class RtspDataDecoderPlugin extends ServicePlugin<RtspMediaService> implements RtspMediaService.OnFrameCallBackPlugin, MediaOutputStream, RawDataCallBack {
 
     MediaOutputStreamRunnableFrame mMediaOutputStreamRunnable;
     NativeDecoder mDecoder;

@@ -43,6 +43,9 @@ public class RtspMediaService extends MediaService implements RtspSource{
     RtpParserPlugin mRtpParserPlugin;
     private int mStartTimeOut = 60000;
     private int mRtpTimeOut;
+    private float[] range;
+    private float scale;
+    private RtspController mRtspController;
     MediaOutputStreamRunnableList mOutputStreamRunnables;
     Runnable  mRtspSessionTimeOut = new Runnable() {
         @Override
@@ -119,6 +122,11 @@ public class RtspMediaService extends MediaService implements RtspSource{
         }
     }
 
+    public RtspMediaService setRtspController(RtspController rtspController) {
+        this.mRtspController = rtspController;
+        return this;
+    }
+
     protected void clearMediaOutputStreamRunnableList(){
         if(mOutputStreamRunnables!=null){
             synchronized (mOutputStreamRunnables){
@@ -137,7 +145,7 @@ public class RtspMediaService extends MediaService implements RtspSource{
 
     @Override
     public void onSocketStream(InputStream is,OutputStream out)throws IOException {
-        if(mInputStreaming){
+        if(isInputStreaming()){
             inputStream(is);
         }else{
             rtspSession();
@@ -147,7 +155,6 @@ public class RtspMediaService extends MediaService implements RtspSource{
             parseRequest(sr,sb,params);
             String request = sb.toString();
             mLogger.log("request:%s",request);
-
             if(request.startsWith("ANNOUNCE")){
                 mIsSource = true;
                 int content_len = Integer.valueOf(params.get("Content-Length"));
@@ -201,6 +208,14 @@ public class RtspMediaService extends MediaService implements RtspSource{
         }
     }
 
+    private void handleRtspRequest(String request, NetParamsMap params) throws IOException {
+        if(request.startsWith("PLAY")){
+            onHanldeRequestPLAY(request,params);
+        }else if(request.startsWith("PAUSE")){
+            onHanldeRequestPAUSE(request,params);
+        }
+    }
+
     public boolean isInputStreaming() {
         return mInputStreaming;
     }
@@ -212,7 +227,9 @@ public class RtspMediaService extends MediaService implements RtspSource{
     private void parseRequest(BufferedReader sr, StringBuffer sb, NetParamsMap params) throws IOException {
         String str = "";
         while (!TextUtils.isEmpty(str=sr.readLine())){
-            sb.append(str).append(end);
+            if(sb!=null){
+                sb.append(str).append(end);
+            }
             if(str.contains("rtsp://")){
                 continue;
             }
@@ -223,6 +240,10 @@ public class RtspMediaService extends MediaService implements RtspSource{
                 }
             }
         }
+    }
+
+    private void parseRequest(BufferedReader sr,NetParamsMap params) throws IOException {
+        parseRequest(sr, null, params);
     }
 
     protected void onHanldeRequestANNOUNCE(String request, NetParamsMap params, String sdp) throws IOException {
@@ -288,6 +309,44 @@ public class RtspMediaService extends MediaService implements RtspSource{
                     "please check DESCRIBE, SETUP, TEARDOWN, PLAY, PAUSE, OPTIONS, ANNOUNCE, RECORD");
             finish();
             return RtspResponseCode.Internal_Server_Error;
+        }
+
+        MediaSource mediaSource = MediaServiceManager.getInstance().getMediaSource(mRtspUrl);
+        if(mediaSource != null){
+            try{
+                String range = params.get("Range");
+                range = range.substring(range.indexOf("=")+1, range.length());
+                if(range.contains("-")){
+                    try{
+                        String[] times = range.split("-");
+                        this.range = new float[2];
+                        String num = times[0].trim();
+                        if(!TextUtils.isEmpty(num)){
+                            this.range[0] = Float.valueOf(num);
+                        }
+                        if(times.length>1){
+                            num = times[1].trim();
+                            if(!TextUtils.isEmpty(num)){
+                                this.range[1] = Float.valueOf(num);
+                            }
+                        }
+                    }catch (Exception e){
+                        e.printStackTrace();
+                    }
+                    mediaSource.play(this.range[0], this.range[1]);
+                }
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+            try{
+                String num = params.get("Scale");
+                if(!TextUtils.isEmpty(num)){
+                    scale = Float.valueOf(num);
+                    mediaSource.scale(scale);
+                }
+            }catch (Exception e){
+                e.printStackTrace();
+            }
         }
 
         StringBuffer sb = new StringBuffer();
@@ -382,8 +441,14 @@ public class RtspMediaService extends MediaService implements RtspSource{
         }
     }
 
-    protected void onHanldeRequestPAUSE(String request,NetParamsMap params){
-
+    protected void onHanldeRequestPAUSE(String request,NetParamsMap params) throws IOException {
+        MediaSource mediaSource = MediaServiceManager.getInstance().getMediaSource(mRtspUrl);
+        if(mediaSource != null){
+            mediaSource.pause();
+            responseRequest(RtspResponseCode.OK,"pause");
+        }else{
+            responseRequest(RtspResponseCode.Error_Not_Acceptable,"not find stream");
+        }
     }
 
     protected int onHanldeRequestRECORD(String request,NetParamsMap params) throws IOException {
@@ -986,7 +1051,17 @@ public class RtspMediaService extends MediaService implements RtspSource{
                 e.printStackTrace();
             }
         }else{
-            //undo
+            if(isFileSource()){
+                try {
+                    StringReader sr = new StringReader(rtsp);
+                    BufferedReader br = new BufferedReader(sr);
+                    NetParamsMap params = new NetParamsMap();
+                    parseRequest(br,params);
+                    handleRtspRequest(rtsp,params);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
         return null;
     }
@@ -1016,12 +1091,37 @@ public class RtspMediaService extends MediaService implements RtspSource{
         return (mFlags&flag)==flag;
     }
 
+    @Override
+    public void scale(float scale) {
+        if(mRtspController!=null){
+            mRtspController.scale(scale);
+        }
+    }
+
+    @Override
+    public void pause() {
+        if(mRtspController!=null){
+            mRtspController.pause();
+        }
+    }
+
+    @Override
+    public void play(float start, float end) {
+        if(mRtspController!=null){
+            mRtspController.play(start, end);
+        }
+    }
+
     public int addFlag(int flags){
         return  mFlags |= flags;
     }
 
     public void setFlag(int flag){
         mFlags = flag;
+    }
+
+    public boolean isFileSource(){
+        return isFlag(Media.FLAG_FILE_SOURCE);
     }
 
     public static interface OnFrameCallBackPlugin extends ServiceListener {

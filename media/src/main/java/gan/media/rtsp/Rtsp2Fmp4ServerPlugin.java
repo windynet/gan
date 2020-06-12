@@ -1,7 +1,7 @@
 package gan.media.rtsp;
 
 import gan.core.system.server.SystemServer;
-import gan.core.system.server.ServerPlugin;
+import gan.core.system.server.ServicePlugin;
 import gan.media.BufferInfo;
 import gan.media.MediaOutputStreamRunnable;
 import gan.media.MediaOutputStreamRunnableFrame;
@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-public class Rtsp2Fmp4ServerPlugin extends ServerPlugin<RtspMediaService> implements RtspMediaService.OnFrameCallBackPlugin,RtspMediaService.OnMediaOutputStreamRunnableChangedPlugin {
+public class Rtsp2Fmp4ServerPlugin extends ServicePlugin<RtspMediaService> implements RtspMediaService.OnFrameCallBackPlugin,RtspMediaService.OnMediaOutputStreamRunnableChangedPlugin {
 
     MediaOutputStreamRunnableFrame mMediaOutputStreamRunnableFrame;
     byte[] head1,head2;

@@ -1,7 +1,7 @@
 package gan.media.rtsp;
 
 import gan.log.DebugLog;
-import gan.core.system.server.ServerPlugin;
+import gan.core.system.server.ServicePlugin;
 import gan.media.BufferInfo;
 import gan.media.MediaOutputStreamRunnable;
 import gan.media.h26x.HUtils;
@@ -9,7 +9,7 @@ import gan.media.h26x.HUtils;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class RtspFrame2RtpPlugin extends ServerPlugin<RtspMediaService> implements RtspMediaService.OnFrameCallBackPlugin {
+public class RtspFrame2RtpPlugin extends ServicePlugin<RtspMediaService> implements RtspMediaService.OnFrameCallBackPlugin {
 
     final static String Tag = RtspFrame2RtpPlugin.class.getName();
     private static final AtomicInteger sAtomSsrc = new AtomicInteger(1000);

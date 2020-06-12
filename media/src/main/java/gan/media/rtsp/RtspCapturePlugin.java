@@ -3,13 +3,13 @@ package gan.media.rtsp;
 import gan.media.BufferInfo;
 import gan.media.MediaCaptureCallBack;
 import gan.media.h264.H264Utils;
-import gan.core.system.server.ServerPlugin;
+import gan.core.system.server.ServicePlugin;
 import gan.core.system.server.SystemServer;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class RtspCapturePlugin extends ServerPlugin<RtspMediaService> implements RtspMediaService.OnFrameCallBackPlugin {
+public class RtspCapturePlugin extends ServicePlugin<RtspMediaService> implements RtspMediaService.OnFrameCallBackPlugin {
 
     MediaCaptureCallBack mediaCaptureCallBack;
 

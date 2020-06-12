@@ -128,6 +128,26 @@ public final class Looper {
     }
 
     /**
+     * 给其他线程循环
+     */
+    public final static void loopMessage(){
+        final Looper me = myLooper();
+        if (me == null) {
+            throw new RuntimeException("No Looper; Looper.prepare() wasn't called on this thread.");
+        }
+
+        Message msg = me.mQueue.findMessage();
+        if(msg!=null){
+            try {
+                msg.target.dispatchMessage(msg);
+            } finally {
+                msg.recycleUnchecked();
+            }
+        }
+    }
+
+
+    /**
      * Return the Looper object associated with the current thread.  Returns
      * null if the calling thread is not associated with a Looper.
      */

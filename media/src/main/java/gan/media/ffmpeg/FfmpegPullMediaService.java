@@ -1,7 +1,7 @@
 package gan.media.ffmpeg;
 
 import gan.core.system.SystemUtils;
-import gan.core.system.server.ServerPlugin;
+import gan.core.system.server.ServicePlugin;
 import gan.core.system.server.SystemServer;
 import gan.log.FileLogger;
 import gan.media.MediaApplication;
@@ -48,7 +48,7 @@ public class FfmpegPullMediaService implements Runnable, FrameCallBack {
         mRtspMediaServer.registerPlugin(new Rtsp2Fmp4ServerPlugin());
         mRtspMediaServer.setOutputEmptyAutoFinish(true);
         mRtspMediaServer.startInputStream(url, Sdp.SDP_OnlyVideo);
-        mRtspMediaServer.registerPlugin(new ServerPlugin<RtspMediaService>(){
+        mRtspMediaServer.registerPlugin(new ServicePlugin<RtspMediaService>(){
             @Override
             protected void onDestory() {
                 super.onDestory();

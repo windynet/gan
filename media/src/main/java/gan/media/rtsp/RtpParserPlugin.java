@@ -1,6 +1,6 @@
 package gan.media.rtsp;
 
-import gan.core.system.server.ServerPlugin;
+import gan.core.system.server.ServicePlugin;
 import gan.media.BufferInfo;
 import gan.media.h264.H264RtpParser;
 import gan.media.h265.H265RtpParser;
@@ -9,7 +9,7 @@ import gan.media.parser.RtpParser;
 
 import java.nio.ByteBuffer;
 
-public class RtpParserPlugin extends ServerPlugin<RtspMediaService> implements RtpParser.OnParserListener, RtpParser.OnParserFrameListener ,RtspMediaService.OnStreamStateListenerPlugin {
+public class RtpParserPlugin extends ServicePlugin<RtspMediaService> implements RtpParser.OnParserListener, RtpParser.OnParserFrameListener ,RtspMediaService.OnStreamStateListenerPlugin {
 
     RtpParser mVideoRtpParser;
     RtpParser mAudioRtpParser;

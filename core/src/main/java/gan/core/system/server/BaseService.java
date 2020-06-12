@@ -1,8 +1,8 @@
 package gan.core.system.server;
 
-import gan.log.FileLogger;
 import gan.core.PluginHelper;
 import gan.core.SyncPluginHelper;
+import gan.log.FileLogger;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -15,7 +15,7 @@ public abstract class BaseService extends Context{
     public final static int State_Create = 1;
     public final static int State_Created = 2;
 
-    private PluginHelper<ServiceListener> pluginHelper = new SyncPluginHelper<ServiceListener>();
+    private PluginHelper<ServiceListener> pluginHelper = new SyncPluginHelper<>();
     private HashMap<String,ServiceMessageHandler> mMapMessageHandlers;
     private Object[] parameters;
     private volatile int state=State_Create;
@@ -79,8 +79,8 @@ public abstract class BaseService extends Context{
         if(isFinishing()){
             return;
         }
-        if(listener instanceof ServerPlugin){
-            ((ServerPlugin)listener).onAttachServer(this);
+        if(listener instanceof ServicePlugin){
+            ((ServicePlugin)listener).onAttachServer(this);
         }
         pluginHelper.addManager(listener);
         if(listener instanceof ServiceMessageHandler){
@@ -98,8 +98,8 @@ public abstract class BaseService extends Context{
         if(listener instanceof ServiceMessageHandler){
             unregisterMessageHandler((ServiceMessageHandler)listener);
         }
-        if(listener instanceof ServerPlugin){
-            ((ServerPlugin)listener).onDestory();
+        if(listener instanceof ServicePlugin){
+            ((ServicePlugin)listener).onDestory();
         }
     }
 

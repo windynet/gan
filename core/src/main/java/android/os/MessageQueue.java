@@ -179,6 +179,42 @@ public final class MessageQueue {
         }
     }
 
+    public final Message findMessage(){
+        int nextPollTimeoutMillis = 0;
+        synchronized (this) {
+            // Process the quit message now that all pending messages have been handled.
+            if (mQuitting) {
+                dispose();
+                return null;
+            }
+            // Try to retrieve the next message.  Return if found.
+            final long now = System.currentTimeMillis();
+            Message prevMsg = null;
+            Message msg = mMessages;
+            if (msg != null) {
+                if (now < msg.when) {
+                    // Next message is not ready.  Set a timeout to wake up when it is ready.
+                    nextPollTimeoutMillis = (int) Math.min(msg.when - now, Integer.MAX_VALUE);
+                } else {
+                    // Got a message.
+                    mBlocked = false;
+                    if (prevMsg != null) {
+                        prevMsg.next = msg.next;
+                    } else {
+                        mMessages = msg.next;
+                    }
+                    msg.next = null;
+                    msg.markInUse();
+                    return msg;
+                }
+            } else {
+                // No more messages.
+                nextPollTimeoutMillis = -1;
+            }
+        }
+        return null;
+    }
+
     void quit(boolean safe) {
         if (!mQuitAllowed) {
             throw new IllegalStateException("Main thread not allowed to quit.");

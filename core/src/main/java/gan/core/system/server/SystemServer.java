@@ -6,12 +6,12 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import gan.core.BaseListener;
-import gan.log.DebugLog;
 import gan.core.PluginHelper;
 import gan.core.SyncPluginHelper;
 import gan.core.file.FileHelper;
 import gan.core.file.SharePerference;
 import gan.core.system.SystemUtils;
+import gan.log.DebugLog;
 import org.springframework.context.ApplicationContext;
 
 import java.io.File;
@@ -25,8 +25,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 public class SystemServer {
-
-	private final static String TAG = SystemServer.class.getName();
 
 	protected static SystemServer sInstance;
 

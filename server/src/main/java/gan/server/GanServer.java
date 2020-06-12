@@ -4,7 +4,6 @@ import android.os.Looper;
 import gan.core.file.SharePerference;
 import gan.core.system.server.SystemServer;
 import gan.log.DebugLog;
-import gan.log.FileLogger;
 import gan.media.MediaApplication;
 import gan.media.ffmpeg.FfmpegMediaServiceManager;
 import gan.media.file.FileMediaServiceManager;
@@ -49,9 +48,7 @@ public class GanServer extends MediaApplication {
 
     @Override
     protected void onCreate(ApplicationContext context) {
-        FileLogger.getInfoLogger().setLogcat(gan.debug);
-        FileLogger.getDebugLogger().setLogcat(gan.debug);
-        if(gan.debug){
+        if(isDebug()){
             DebugLog.setLevel(gan.logLevel);
         }else{
             DebugLog.setLevel(DebugLog.INFO);
@@ -64,26 +61,13 @@ public class GanServer extends MediaApplication {
             RtspMediaServiceManager.getInstance().initServer();
         }
 
+        addManager(FfmpegMediaServiceManager.getInstance());
+        addManager(FileMediaServiceManager.getInstance());
+
         if(gan.gb28181Enable){
         }
-
         if(gan.jt1078Enable){
         }
-
-        try {
-            this.getClass().getClassLoader().loadClass(FfmpegMediaServiceManager.class.getName());
-            addManager(FfmpegMediaServiceManager.getInstance());
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-
-        try {
-            this.getClass().getClassLoader().loadClass(FileMediaServiceManager.class.getName());
-            addManager(FileMediaServiceManager.getInstance());
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-
         if(gan.rtmpEnable){
         }
     }
