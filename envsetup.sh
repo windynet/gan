@@ -2,7 +2,7 @@ export MALLOC_ARENA_MAX=1
 
 export Project_Name=gan
 export Project_Path=$(pwd)
-export Project_Ver=2.0.0
+export Project_Ver=2.1.1
 export LD_LIBRARY_PATH=$Project_Path/libs/
 
 echo Project_Name=$Project_Name
