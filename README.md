@@ -8,9 +8,14 @@
 支持播放rtmp,hls流
 使用rtsp播放rtmp/hls地址
 在地址前加rtsp
-
 列子: 
 rtsp://{serverIp}:{rtspPort}/rtmp://202.69.69.180:443/webcast/bshdlive-pc
+
+点播：
+文件放在public/file 下边
+测试网页上播放文件 xx.mp4 等文件
+手机上播放 
+rtsp://{serverIp}:{rtspPort}/xx.mp4
 
 ##软件架构
 软件架构说明

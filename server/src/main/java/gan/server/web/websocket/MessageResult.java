@@ -6,12 +6,12 @@ public class MessageResult extends Result {
 
     public String mediacodec;
 
-    public MessageResult setMediacodec(String mediacodec) {
+    public MessageResult setMediaCodec(String mediacodec) {
         this.mediacodec = mediacodec;
         return this;
     }
 
-    public String getMediacodec() {
+    public String getMediaCodec() {
         return mediacodec;
     }
 }

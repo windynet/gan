@@ -116,7 +116,8 @@ public class WebSocketService extends BaseService {
                 try {
                     MediaSource source = result.mediaSource;
                     sendMessage(new MessageResult()
-                            .setMediacodec(source.getMediaCodec())
+                            .setMediaCodec(source.getMediaCodec())
+                            .setData(result.data)
                             .asOk());
                 } catch (IOException e) {
                     FileLogger.getExceptionLogger().log(e);
@@ -208,29 +209,16 @@ public class WebSocketService extends BaseService {
         public synchronized void control(String message){
             try{
                 if(start.get()){
-                    if(mOutputStreamRunnable instanceof MediaOutputStreamRunnableFrame){
-                        ControlMessage controlMessage = SystemUtils.safeJsonValues(message,ControlMessage.class);
-                        if(controlMessage!=null){
-                            if(!TextUtils.isEmpty(controlMessage.rtsp)){
-                                if(mMediaSource instanceof RtspMediaService){
-                                    ((RtspMediaService)mMediaSource).sendRtspRequest(controlMessage.rtsp);
-                                }
-                            }else{
+                    ControlMessage controlMessage = SystemUtils.safeJsonValues(message,ControlMessage.class);
+                    if(controlMessage!=null){
+                        if(!TextUtils.isEmpty(controlMessage.rtsp)){
+                            if(mMediaSource instanceof RtspMediaService){
+                                ((RtspMediaService)mMediaSource).sendRtspRequest(controlMessage.rtsp);
+                            }
+                        }else{
+                            if(mOutputStreamRunnable instanceof MediaOutputStreamRunnableFrame){
                                 MediaOutputStreamRunnableFrame runnableFrame = ((MediaOutputStreamRunnableFrame)mOutputStreamRunnable);
                                 runnableFrame.setSleepTime(controlMessage.sleeptime);
-                                /**
-                                 * 设备视频回放
-                                 */
-                                if(mMediaSource instanceof RtspMediaService){
-                                    RtspMediaService server = (RtspMediaService) mMediaSource;
-                                    if(server!=null){
-                                        Object tag = server.getIdTag("replay");
-                                        if(tag!=null
-                                                &&((Boolean)tag)){//回放
-                                        }
-                                    }
-                                }
-                                //直播
                                 runnableFrame.setStatus(controlMessage.status);
                             }
                         }

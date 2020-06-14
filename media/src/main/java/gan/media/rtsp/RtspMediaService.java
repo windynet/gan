@@ -8,6 +8,7 @@ import gan.core.utils.TextUtils;
 import gan.log.DebugLog;
 import gan.log.FileLogger;
 import gan.media.*;
+import gan.media.file.MediaOutputStreamRunnableFile;
 import gan.media.h264.H264Utils;
 import gan.media.parser.PSOverTcpStreamParser;
 import gan.media.parser.RtpOverTcpStreamParser;
@@ -1109,6 +1110,18 @@ public class RtspMediaService extends MediaService implements RtspSource{
     public void play(float start, float end) {
         if(mRtspController!=null){
             mRtspController.play(start, end);
+        }
+    }
+
+    protected void clearMediaOutputStreamRunnableBuffer(){
+        if(mOutputStreamRunnables!=null){
+            synchronized (mOutputStreamRunnables){
+                for(MediaOutputStreamRunnable runnable:mOutputStreamRunnables.getAll()){
+                    if(runnable instanceof MediaOutputStreamRunnableFile){
+                        ((MediaOutputStreamRunnableFile)runnable).clearCache();
+                    }
+                }
+            }
         }
     }
 

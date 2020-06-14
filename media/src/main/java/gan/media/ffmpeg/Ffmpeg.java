@@ -60,7 +60,10 @@ public class Ffmpeg {
     }
 
     public long seek(long seek){
-        return nativeSeek(handle, seek);
+        if(handle>0){
+            return nativeSeek(handle, seek);
+        }
+        return -1;
     }
 
     public int parseFrame(){
@@ -68,7 +71,10 @@ public class Ffmpeg {
     }
 
     public int call(String url){
-        return nativeOpen(handle, guessFormatName(url), url);
+        if(handle>0){
+            return nativeOpen(handle, guessFormatName(url), url);
+        }
+        return -1;
     }
 
     private String guessFormatName(String url){

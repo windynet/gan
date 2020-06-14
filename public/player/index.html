@@ -60,7 +60,7 @@
         <div style="margin: 6px">
             <button style="padding: 10px" onclick="fullscreen(2)">全屏</button>
             <button style="padding: 10px" onclick="exitfullscreen(2)">退出全屏</button>
-            <button style="padding: 10px" onclick="seek1000(2)">seek1000</button>
+            <button style="padding: 10px" onclick="seek(2)">seek200</button>
         </div>
     </div>
     <div style="margin-top: 20px">
@@ -241,11 +241,11 @@
         }
     }
 
-    function seek1000(i) {
+    function seek(i) {
         var player = mPlayer[i];
         if(player){
             console.log("seek");
-            player.seek(1000);
+            player.seek(200);
         }
     }
 

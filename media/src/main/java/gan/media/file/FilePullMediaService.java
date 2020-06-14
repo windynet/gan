@@ -18,6 +18,7 @@ import gan.media.rtsp.Sdp;
 
 import java.io.FileOutputStream;
 import java.nio.ByteBuffer;
+import java.util.UUID;
 
 public class FilePullMediaService implements Runnable, FrameCallBack, RtspController {
 
@@ -38,6 +39,11 @@ public class FilePullMediaService implements Runnable, FrameCallBack, RtspContro
         int bufferSize = MediaApplication.getMediaConfig().rtspFrameBufferSize*2;
         mTempPacketInfo = new PacketInfo(bufferSize);
         mVideoDataPacketInfo = new PacketInfo(bufferSize);
+    }
+
+    protected String sourceKey(String url){
+        return String.format("file_%s_%s_%s",url,
+                System.currentTimeMillis(),UUID.randomUUID());
     }
 
     MediaSourceResult result;
@@ -71,12 +77,13 @@ public class FilePullMediaService implements Runnable, FrameCallBack, RtspContro
         }
 
         if(result.ok){
-            mRtspMediaServer = SystemServer.startServer(RtspMediaService.class, new MediaSessionString(url));
+            mRtspMediaServer = SystemServer.startServer(RtspMediaService.class,
+                    new MediaSessionString(url));
             mRtspMediaServer.registerPlugin(new RtspFrame2RtpPlugin());
             mRtspMediaServer.setOutputEmptyAutoFinish(true);
             mRtspMediaServer.setRtspController(this);
             mRtspMediaServer.addFlag(Media.FLAG_FILE_SOURCE);
-            mRtspMediaServer.startInputStream(url, Sdp.SDP);
+            mRtspMediaServer.startInputStream(sourceKey(url), Sdp.SDP);
             mRtspMediaServer.registerPlugin(new ServicePlugin<RtspMediaService>(){
                 @Override
                 protected void onDestory() {
@@ -152,7 +159,9 @@ public class FilePullMediaService implements Runnable, FrameCallBack, RtspContro
                     notifyResult();
                 }
             }finally {
-                handler.removeCallbacksAndMessages(null);
+                if(handler!=null){
+                    handler.removeCallbacksAndMessages(null);
+                }
                 Looper.myLooper().quitSafely();
             }
         }
@@ -266,7 +275,7 @@ public class FilePullMediaService implements Runnable, FrameCallBack, RtspContro
             handler.post(new Runnable() {
                 @Override
                 public void run() {
-                    ffmpeg.seek((long) Math.floor(start));
+                    seek((long) Math.floor(start));
                 }
             });
         }
@@ -283,5 +292,11 @@ public class FilePullMediaService implements Runnable, FrameCallBack, RtspContro
         if(runing){
             isPaused = true;
         }
+    }
+
+    protected final void seek(long seek){
+        isPaused = false;
+        long ret=ffmpeg.seek(seek);
+        mLogger.log("seek ret:%s",ret);
     }
 }

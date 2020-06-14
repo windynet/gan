@@ -105,9 +105,12 @@ public class MediaServiceManager {
             for(MediaSourceAdapter sourceAdapter:mMediaSourceAdapters){
                 if(sourceAdapter.accept(request)){
                     result = sourceAdapter.getMediaSourceResult(request);
+                    if(result!=null){
+                        dumpSource(result.mediaSource);
+                        return result;
+                    }
                 }
             }
-            dumpSource(result.mediaSource);
             return result;
         }else{
             dumpSource(source);
@@ -122,6 +125,10 @@ public class MediaServiceManager {
             for(MediaSourceAdapter sourceAdapter:mMediaSourceAdapters){
                 if(sourceAdapter.accept(request)){
                     source = sourceAdapter.getMediaSource(request);
+                    if(source!=null){
+                        dumpSource(source);
+                        return source;
+                    }
                 }
             }
         }

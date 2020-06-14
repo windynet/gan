@@ -55,22 +55,20 @@ public class H264StreamMp4Muxer extends Mp4MuxerImpl implements MP4StreamMuxer {
     long lastVideoTimeSample;
     public long getVideoTime(long timeSample,long lastTimeSample){
         if(lastTimeSample==0){
-            try{
-                if(timeSample<lastVideoTimeSample){
-                    DebugLog.info("videotime error");
-                    onEvent(Mp4Muxer.Event_TimeError,"video time error");
-                }
-                return timeSample;
-            }finally {
-                if(lastVideoTimeSample==0){
-                    lastVideoTimeSample = timeSample;
-                }
-                long time = timeSample-lastVideoTimeSample;
-                if(time>24000
-                        ||time<0){
-                    DebugLog.info("videotimex:"+time);
-                }
+            if(lastVideoTimeSample == 0){
                 lastVideoTimeSample = timeSample;
+            }
+            if(timeSample<lastVideoTimeSample){
+                DebugLog.info("audiotime exception");
+                return lastVideoTimeSample+=3600;
+            }else{
+                long time = timeSample-lastVideoTimeSample;
+                if(time>24000 ||time<0){
+                    DebugLog.info("audiotimex:"+time);
+                    return lastVideoTimeSample+=3600;
+                }else{
+                    return lastVideoTimeSample = timeSample;
+                }
             }
         }
         return timeSample - lastTimeSample;
@@ -79,22 +77,20 @@ public class H264StreamMp4Muxer extends Mp4MuxerImpl implements MP4StreamMuxer {
     long lastAudioTimeSample;
     public long getAudioTime(long timeSample,long lastTimeSample){
         if(lastTimeSample==0){
-            try{
-                if(timeSample<lastAudioTimeSample){
-                    DebugLog.info("audiotime error");
-                    onEvent(Mp4Muxer.Event_TimeError,"audiotime error");
-                }
-                return timeSample;
-            }finally {
-                if(lastAudioTimeSample == 0){
-                    lastAudioTimeSample = timeSample;
-                }
-                long time = timeSample-lastAudioTimeSample;
-                if(time>24000
-                        ||time<0){
-                    DebugLog.info("audiotimex:"+time);
-                }
+            if(lastAudioTimeSample == 0){
                 lastAudioTimeSample = timeSample;
+            }
+            if(timeSample<lastAudioTimeSample){
+                DebugLog.info("audiotime exception");
+                return lastAudioTimeSample+=1000;
+            }else{
+                long time = timeSample-lastAudioTimeSample;
+                if(time>24000 ||time<0){
+                    DebugLog.info("audiotimex:"+time);
+                    return lastAudioTimeSample+=1000;
+                }else{
+                    return lastAudioTimeSample = timeSample;
+                }
             }
         }
         return timeSample - lastTimeSample;

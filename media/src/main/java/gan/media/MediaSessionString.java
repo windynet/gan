@@ -1,7 +1,5 @@
 package gan.media;
 
-import gan.media.MediaSession;
-
 import java.io.IOException;
 import java.util.UUID;
 
@@ -31,12 +29,10 @@ public class MediaSessionString implements MediaSession<String> {
 
     @Override
     public void sendMessage(String message) throws IOException {
-        throw  new UnsupportedOperationException("unsupported sendMessage");
     }
 
     @Override
     public void sendMessage(int b) throws IOException {
-        throw  new UnsupportedOperationException("unsupported sendMessage");
     }
 
     @Override
@@ -46,7 +42,6 @@ public class MediaSessionString implements MediaSession<String> {
 
     @Override
     public void sendMessage(byte[] b, int off, int len) throws IOException {
-        throw  new UnsupportedOperationException("unsupported sendMessage");
     }
 
     @Override

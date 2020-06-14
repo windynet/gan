@@ -6,7 +6,6 @@ import gan.log.FileLogger;
 import gan.media.*;
 import gan.media.h26x.HUtils;
 
-import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -19,7 +18,7 @@ public class MediaOutputStreamRunnableFile implements MediaOutputStreamRunnable 
 
     MediaOutputStream mOutputStream;
     Vector<PacketInfo> mRtspPacketInfos;
-    private int mPacketBufferMaxCount=10;
+    private int mPacketBufferMaxCount;
     PacketInfoRecyclePool mByteBufferPool;
     private AtomicBoolean mClosed = new AtomicBoolean(false);
     MediaOutputInfo mMediaInfo;
@@ -28,7 +27,7 @@ public class MediaOutputStreamRunnableFile implements MediaOutputStreamRunnable 
     private long currentVideoTime;
 
     public MediaOutputStreamRunnableFile(MediaOutputStream out, MediaOutputInfo mediaInfo){
-        this(out,mediaInfo,10, MediaApplication.getMediaConfig().rtspFrameBufferSize);
+        this(out,mediaInfo,4, MediaApplication.getMediaConfig().rtspFrameBufferSize);
     }
 
     public MediaOutputStreamRunnableFile(MediaOutputStream out, MediaOutputInfo mediaInfo, int poolSize, int capacity){
@@ -76,7 +75,7 @@ public class MediaOutputStreamRunnableFile implements MediaOutputStreamRunnable 
 
     private long videoOriginSampleTime;
     private long videoCurSampleTime;
-    private long videoOffsetSampelTime;
+    private long videoOffsetSampleTime;
     private long audioOriginSampleTime;
     private long audioCurSampleTime;
     private long audioOffsetSampelTime;
@@ -114,8 +113,8 @@ public class MediaOutputStreamRunnableFile implements MediaOutputStreamRunnable 
 
     private void updateSampleTime(byte channel,long time) {
         if(channel == 0) {
-            if (videoOffsetSampelTime <=0 && videoOriginSampleTime > 0) {
-                videoOffsetSampelTime = time - videoOriginSampleTime;
+            if (videoOffsetSampleTime <=0 && videoOriginSampleTime > 0) {
+                videoOffsetSampleTime = time - videoOriginSampleTime;
             }
         }else {
             if (audioOffsetSampelTime <=0 && audioOriginSampleTime > 0) {
@@ -127,17 +126,33 @@ public class MediaOutputStreamRunnableFile implements MediaOutputStreamRunnable 
     private void putPacketInfo2(byte channel, byte[] packet, int offset,int len, long pts){
         if(channel==0){
             if (videoCurSampleTime < 0) { videoCurSampleTime = pts;}
-            videoCurSampleTime += videoOffsetSampelTime;
+            videoCurSampleTime += fixVideoSampleTimeOffset(videoOffsetSampleTime);
             videoOriginSampleTime = pts;
-            videoOffsetSampelTime = 0;
+            videoOffsetSampleTime = 0;
             putPacketInfo(channel, packet, offset, len, videoCurSampleTime);
         }else{
             if (audioCurSampleTime < 0) { audioCurSampleTime = pts;}
-            audioCurSampleTime += audioOffsetSampelTime;
+            audioCurSampleTime += fixAudioSampleTimeOffset(audioOffsetSampelTime);
             audioOriginSampleTime = pts;
             audioOffsetSampelTime = 0;
             putPacketInfo(channel, packet, offset, len, audioCurSampleTime);
         }
+    }
+
+    public long fixVideoSampleTimeOffset(long offset){
+        if(offset>20000||offset<0){
+            DebugLog.debug("fixVideoSampleTimeOffset offset:%s",offset);
+            return 3600;
+        }
+        return offset;
+    }
+
+    public long fixAudioSampleTimeOffset(long offset){
+        if(offset>20000||offset<0){
+            DebugLog.debug("fixVideoSampleTimeOffset offset:%s",offset);
+            return 1000;
+        }
+        return offset;
     }
 
     private void putPacketInfo(byte channel, byte[] packet, int offset,int len, long pts){
@@ -178,38 +193,12 @@ public class MediaOutputStreamRunnableFile implements MediaOutputStreamRunnable 
         return false;
     }
 
-    public PacketInfo getPacketInfo(){
-        return mByteBufferPool.poll();
-    }
-
-    public void putPacketInfo(PacketInfo info){
-        mRtspPacketInfos.add(info);
-    }
-
-    public boolean isClosed() {
-        return mClosed.get();
-    }
-
     @Override
     public void start(){
         if(mClosed.get()){
             return;
         }
         run();
-    }
-
-    public void setSleepTime(double sleepTime){
-        BigDecimal bg = new BigDecimal(sleepTime);
-        double f1 = bg.setScale(3, BigDecimal.ROUND_HALF_UP).doubleValue();
-        setSleepTime((long)(f1*1000));
-    }
-
-    long lastSleepTime;
-    public void setSleepTime(long sleepTime) {
-        long currentTime = System.currentTimeMillis();
-        long timex = currentTime-lastSleepTime;
-        if(timex>2000){//每隔2s更新一次帧率
-        }
     }
 
     @Override
@@ -261,6 +250,13 @@ public class MediaOutputStreamRunnableFile implements MediaOutputStreamRunnable 
                 }
             }
         }
+    }
+
+    public void clearCache(){
+        for(PacketInfo rtspPacketInfo : mRtspPacketInfos){
+            rtspPacketInfo.clear();
+        }
+        mRtspPacketInfos.clear();
     }
 
     public void close() {
